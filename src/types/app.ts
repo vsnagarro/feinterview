@@ -1,0 +1,86 @@
+export type Difficulty = 'junior' | 'mid' | 'senior'
+export type QuestionSource = 'manual' | 'ai_generated'
+export type SessionStatus = 'draft' | 'active' | 'completed'
+
+export const SUPPORTED_LANGUAGES = [
+  'javascript',
+  'typescript',
+  'python',
+  'css',
+  'html',
+  'java',
+  'go',
+  'rust',
+  'sql',
+] as const
+
+export type Language = (typeof SUPPORTED_LANGUAGES)[number]
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  junior: 'Junior',
+  mid: 'Mid-level',
+  senior: 'Senior',
+}
+
+export const LANGUAGE_LABELS: Record<Language, string> = {
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  python: 'Python',
+  css: 'CSS',
+  html: 'HTML',
+  java: 'Java',
+  go: 'Go',
+  rust: 'Rust',
+  sql: 'SQL',
+}
+
+export interface GeneratedQuestion {
+  question: string
+  answer: string
+  tags: string[]
+  difficulty: Difficulty
+  topic: string
+}
+
+export interface GeneratedSnippet {
+  title: string
+  description: string
+  language: string
+  code: string
+  explanation: string
+  tags: string[]
+  difficulty: Difficulty
+}
+
+export interface GenerateQuestionsPayload {
+  sessionId: string
+  candidateName: string
+  skills: string[]
+  yearsExp: number
+  jobDescription: string
+  difficulty: Difficulty
+  count?: number
+}
+
+export interface AnalyzeCodePayload {
+  linkId: string
+  code: string
+  language: string
+  problemStatement: string
+}
+
+export interface CodeAnalysis {
+  summary: string
+  strengths: string[]
+  issues: string[]
+  followUpQuestions: string[]
+}
+
+export interface ChallengeLink {
+  id: string
+  token: string
+  expiresAt: string
+  isActive: boolean
+  candidateName?: string
+  openedAt?: string
+}
