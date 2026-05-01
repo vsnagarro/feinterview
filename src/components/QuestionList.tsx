@@ -20,7 +20,7 @@ export default function QuestionList() {
     ;(async () => {
       const supabase = createClient()
       const { data, error } = await supabase
-        .from<Question>('questions')
+        .from('questions')
         .select('*')
         .order('created_at', { ascending: false })
 
