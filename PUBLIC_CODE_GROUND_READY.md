@@ -3,6 +3,7 @@
 ## What's Already Built & Working
 
 ### 🔓 Public Challenge Page
+
 **URL Pattern:** `http://localhost:3000/challenge/[unique-token]`
 
 ✅ **DOES NOT REQUIRE LOGIN**
@@ -11,6 +12,7 @@
 ✅ **Real-time code submission**
 
 ### 📝 Features On the Page
+
 1. **Problem Statement**
    - Challenge title
    - Job description excerpt
@@ -33,6 +35,7 @@
    - Timestamp of each submission
 
 ### 👁️ Real-Time Changes (WORKING NOW)
+
 1. Candidate views problem ✅
 2. Candidate types code ✅
 3. Candidate clicks submit ✅
@@ -46,6 +49,7 @@
 ## How to Generate & Share Challenges
 
 ### Step 1: Create Session (Admin Only)
+
 ```
 Admin Login → Sessions → New Session
 Select: Candidate + Job Description
@@ -56,6 +60,7 @@ Output: Shareable URL
 ```
 
 ### Step 2: Share Link with Candidate
+
 ```
 Copy: http://localhost:3000/challenge/[generated-token]
 Share: Email, Teams, Slack, etc.
@@ -63,6 +68,7 @@ Candidate: Opens link (NO LOGIN NEEDED!)
 ```
 
 ### Step 3: Candidate Takes Challenge
+
 ```
 1. Opens link in any browser
 2. Sees problem statement
@@ -73,6 +79,7 @@ Candidate: Opens link (NO LOGIN NEEDED!)
 ```
 
 ### Step 4: Monitor in Real-Time
+
 ```
 Admin: Open /sessions/[id]
 Watch: Submissions appear
@@ -85,6 +92,7 @@ Analyze: Final submission
 ## 🎯 Complete Feature List
 
 ### For Candidates (Public View - NO LOGIN)
+
 - ✅ Access challenge via link
 - ✅ Read problem statement
 - ✅ View required skills & tech stack
@@ -96,6 +104,7 @@ Analyze: Final submission
 - ✅ No account needed
 
 ### For Admins/Interviewers (Dashboard - REQUIRES LOGIN)
+
 - ✅ Create sessions
 - ✅ Generate shareable tokens
 - ✅ Set expiration times
@@ -121,6 +130,7 @@ Analyze: Final submission
 ## 📊 Data Saved
 
 When candidate submits code:
+
 ```json
 {
   "id": "uuid",
@@ -138,6 +148,7 @@ Trackable in real-time via Supabase Dashboard.
 ## 🚀 Ready to Use
 
 **Steps to start:**
+
 1. Create test credentials (see CREDENTIALS_SETUP.md)
 2. Login to admin dashboard
 3. Create job description
@@ -216,20 +227,24 @@ http://localhost:3000/challenge/ghi789rst
 ## ✨ Key Highlights
 
 🎯 **No Login Required for Candidates**
+
 - Dramatically improves user experience
 - Removes friction from interview process
 
 ⚡ **Instant Sharing**
+
 - Generate link in seconds
 - Share immediately
 - No setup needed on candidate side
 
 🔐 **Secure & Time-Bound**
+
 - Automatic expiration
 - Unique tokens
 - Admin monitoring
 
 📊 **Full Tracking**
+
 - Every submission saved
 - Submission history
 - Language preference

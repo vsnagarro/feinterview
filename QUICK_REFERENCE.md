@@ -3,6 +3,7 @@
 ## ✅ What's Ready NOW
 
 ### 1️⃣ PUBLIC CODE GROUND (NO LOGIN NEEDED)
+
 ```
 URL: http://localhost:3000/challenge/[token]
 
@@ -17,6 +18,7 @@ Features:
 ```
 
 ### 2️⃣ ADMIN DASHBOARD (LOGIN REQUIRED)
+
 ```
 URL: http://localhost:3000/login
 Email: admin@feinterview.dev
@@ -34,6 +36,7 @@ Features:
 ```
 
 ### 3️⃣ REAL-TIME TRACKING
+
 ```
 Candidate Actions:
 1. Opens public link (no login)
@@ -52,6 +55,7 @@ Code preserved for later
 ## 🎯 3-Step Setup
 
 ### Step 1: Create Credentials (5 min)
+
 ```bash
 # Go to Supabase Console
 https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
@@ -65,6 +69,7 @@ https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
 ```
 
 ### Step 2: Create Challenge (5 min)
+
 ```
 1. Login: http://localhost:3000/login
 2. Go: /sessions/new
@@ -75,6 +80,7 @@ https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
 ```
 
 ### Step 3: Test (5 min)
+
 ```
 1. Open challenge link in incognito window
 2. Submit some code
@@ -87,14 +93,14 @@ https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
 
 ## 🔗 Key URLs
 
-| Path | Purpose | Auth Required |
-|------|---------|-----------------|
-| `/login` | Admin/Interviewer login | ❌ No |
-| `/challenge/[token]` | Public code challenge | ❌ No |
-| `/dashboard` | Admin dashboard | ✅ Yes |
-| `/sessions` | Interview sessions | ✅ Yes |
-| `/candidates` | Candidate management | ✅ Yes |
-| `/library` | Questions & snippets | ✅ Yes |
+| Path                 | Purpose                 | Auth Required |
+| -------------------- | ----------------------- | ------------- |
+| `/login`             | Admin/Interviewer login | ❌ No         |
+| `/challenge/[token]` | Public code challenge   | ❌ No         |
+| `/dashboard`         | Admin dashboard         | ✅ Yes        |
+| `/sessions`          | Interview sessions      | ✅ Yes        |
+| `/candidates`        | Candidate management    | ✅ Yes        |
+| `/library`           | Questions & snippets    | ✅ Yes        |
 
 ---
 
@@ -185,6 +191,7 @@ https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
 ## ⚡ Features Summary
 
 ### ✅ Implemented
+
 - Public code challenge pages
 - Monaco editor integration
 - Code submission system
@@ -198,6 +205,7 @@ https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
 - Time-boxed challenges
 
 ### ⏳ Coming Soon
+
 - Live real-time admin view (Supabase Realtime)
 - Gemini AI question generation
 - Gemini AI code analysis
@@ -209,19 +217,20 @@ https://supabase.com/dashboard/project/eyvmfcjpqkrxahsipqiv/auth/users
 
 ## 🐛 Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Can't access /login | Clear cookies, try incognito |
+| Issue                           | Solution                              |
+| ------------------------------- | ------------------------------------- |
+| Can't access /login             | Clear cookies, try incognito          |
 | Challenge link says "not found" | Verify token in URL, check expiration |
-| Code submission fails | Check browser console, verify token |
-| Can't see submission in admin | Refresh page, check session ID |
-| Login redirects infinitely | Should be fixed, clear cache |
+| Code submission fails           | Check browser console, verify token   |
+| Can't see submission in admin   | Refresh page, check session ID        |
+| Login redirects infinitely      | Should be fixed, clear cache          |
 
 ---
 
 ## 📞 Support
 
 See full docs:
+
 - `CREDENTIALS_SETUP.md` - Detailed setup
 - `setup-credentials.md` - Quick start
 - `PUBLIC_CODE_GROUND_READY.md` - Feature details

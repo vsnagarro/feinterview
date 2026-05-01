@@ -146,7 +146,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
               <p className="text-gray-600 text-sm mt-1">Candidate: {challenge.candidate.name}</p>
             </div>
             <div className="flex gap-2">
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white">
+              <select title="Language" name="language" value={language} onChange={(e) => setLanguage(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white">
                 {challenge.session.languages.map((lang) => (
                   <option key={lang} value={lang.toLowerCase()}>
                     {lang}
