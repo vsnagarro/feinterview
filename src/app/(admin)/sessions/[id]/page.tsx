@@ -1,57 +1,89 @@
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Badge } from '@/components/ui/Badge'
-import { ChallengeLinkGenerator } from '@/components/admin/ChallengeLinkGenerator'
-import { formatDateShort } from '@/lib/utils'
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { Badge } from "@/components/ui/Badge";
+import { ChallengeLinkGenerator } from "@/components/admin/ChallengeLinkGenerator";
+import { SaveToLibraryButton } from "@/components/admin/SaveToLibraryButton";
+import { DeleteSessionButton } from "@/components/admin/DeleteSessionButton";
+import { formatDateShort } from "@/lib/utils";
 
-interface Candidate { id: string; name: string; email: string | null; skills: string[]; years_exp: number | null }
-interface JD { id: string; title: string; company: string | null }
-interface SessionQuestion { id: string; question: string; answer: string; order_index: number; asked: boolean; rating: number | null }
-interface CodeChallenge { id: string; title: string }
-interface ChallengeLink { id: string; token: string; expires_at: string; is_active: boolean; candidate_name: string | null; opened_at: string | null }
+interface SessionRecord {
+  id: string;
+  created_at: string;
+  status: string;
+  candidate_id: string;
+  job_description_id: string | null;
+  languages: string[];
+}
+interface Candidate {
+  id: string;
+  name: string;
+  email: string | null;
+  skills: string[];
+  experience_level: string | null;
+  summary: string | null;
+}
+interface JD {
+  id: string;
+  title: string;
+}
+interface SessionQuestion {
+  id: string;
+  question: string;
+  answer: string;
+  order_index: number;
+  asked: boolean;
+  rating: number | null;
+  question_id: string | null;
+}
+interface CodeChallenge {
+  id: string;
+  title: string;
+  problem_statement: string;
+  snippet_id: string | null;
+}
+interface ChallengeLink {
+  id: string;
+  token: string;
+  expires_at: string;
+  is_active: boolean;
+  candidate_name: string | null;
+  opened_at: string | null;
+}
 
 export default async function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const supabase = await createClient()
+  const { id } = await params;
+  const supabase = await createClient();
 
-  const { data: session } = await supabase
-    .from('interview_sessions')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data: session } = await supabase.from("sessions").select("*").eq("id", id).single();
 
-  if (!session) notFound()
+  if (!session) notFound();
+  const typedSession = session as SessionRecord;
 
-  const [
-    { data: candidate },
-    { data: jd },
-    { data: questions },
-    { data: challenges },
-  ] = await Promise.all([
-    supabase.from('candidates').select('*').eq('id', session.candidate_id).single(),
-    session.jd_id ? supabase.from('job_descriptions').select('id, title, company').eq('id', session.jd_id).single() : Promise.resolve({ data: null }),
-    supabase.from('session_questions').select('*').eq('session_id', id).order('order_index'),
-    supabase.from('code_challenges').select('*').eq('session_id', id).order('created_at'),
-  ])
+  const [{ data: candidate }, { data: jd }, { data: questions }, { data: challenges }] = await Promise.all([
+    supabase.from("candidates").select("*").eq("id", typedSession.candidate_id).single(),
+    typedSession.job_description_id ? supabase.from("job_descriptions").select("id, title").eq("id", typedSession.job_description_id).single() : Promise.resolve({ data: null }),
+    supabase.from("session_questions").select("*").eq("session_id", id).order("order_index"),
+    supabase.from("code_challenges").select("*").eq("session_id", id).order("created_at"),
+  ]);
 
-  const typedCandidate = candidate as Candidate | null
-  const typedJD = jd as JD | null
-  const typedQuestions = (questions as SessionQuestion[]) ?? []
-  const typedChallenges = (challenges as CodeChallenge[]) ?? []
-  const firstChallenge = typedChallenges[0]
+  const typedCandidate = candidate as Candidate | null;
+  const typedJD = jd as JD | null;
+  const typedQuestions = (questions as SessionQuestion[]) ?? [];
+  const typedChallenges = (challenges as CodeChallenge[]) ?? [];
+  const unsavedQCount = typedQuestions.filter((q) => !q.question_id).length;
+  const unsavedCCount = typedChallenges.filter((c) => !c.snippet_id).length;
+  const challengeIds = typedChallenges.map((challenge) => challenge.id);
+  const { data: links } = challengeIds.length > 0 ? await supabase.from("challenge_links").select("*").in("challenge_id", challengeIds).order("created_at", { ascending: false }) : { data: [] };
+  const challengeLinks = (links as (ChallengeLink & { challenge_id?: string })[] | null) ?? [];
+  const linksByChallengeId = new Map<string, ChallengeLink[]>();
+  challengeLinks.forEach((link) => {
+    const challengeId = (link as ChallengeLink & { challenge_id?: string }).challenge_id;
+    if (!challengeId) return;
+    linksByChallengeId.set(challengeId, [...(linksByChallengeId.get(challengeId) ?? []), link]);
+  });
 
-  const challengeLinks: ChallengeLink[] = []
-  if (firstChallenge) {
-    const { data: links } = await supabase
-      .from('challenge_links')
-      .select('*')
-      .eq('challenge_id', firstChallenge.id)
-      .order('created_at', { ascending: false })
-    if (links) challengeLinks.push(...(links as ChallengeLink[]))
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
@@ -59,25 +91,25 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <Link href="/sessions" className="text-sm text-slate-500 hover:text-sky-600">← Sessions</Link>
+            <Link href="/sessions" className="text-sm text-slate-500 hover:text-sky-600">
+              ← Sessions
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {typedCandidate?.name ?? 'Session'}
-          </h1>
-          {typedJD && (
-            <p className="text-slate-500 text-sm mt-1">
-              {typedJD.title}{typedJD.company && ` @ ${typedJD.company}`}
-            </p>
-          )}
+          <h1 className="text-2xl font-bold text-slate-900">{typedCandidate?.name ?? "Session"}</h1>
+          {typedJD && <p className="text-slate-500 text-sm mt-1">{typedJD.title}</p>}
           <div className="flex items-center gap-2 mt-2">
-            <Badge variant={session.difficulty === 'senior' ? 'danger' : session.difficulty === 'junior' ? 'success' : 'warning'}>
-              {session.difficulty}
-            </Badge>
-            <Badge variant={session.status === 'active' ? 'success' : session.status === 'completed' ? 'info' : 'default'}>
-              {session.status}
-            </Badge>
-            <span className="text-xs text-slate-400">{formatDateShort(session.created_at)}</span>
+            {typedSession.languages.map((language) => (
+              <Badge key={language} variant="default">
+                {language}
+              </Badge>
+            ))}
+            <Badge variant={typedSession.status === "active" ? "success" : typedSession.status === "completed" ? "info" : "default"}>{typedSession.status}</Badge>
+            <span className="text-xs text-slate-400">{formatDateShort(typedSession.created_at)}</span>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <SaveToLibraryButton sessionId={id} questionCount={unsavedQCount} challengeCount={unsavedCCount} />
+          <DeleteSessionButton sessionId={id} redirectTo="/sessions" />
         </div>
       </div>
 
@@ -86,12 +118,27 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         <div className="card p-4">
           <h2 className="font-semibold text-slate-900 mb-3">Candidate</h2>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-            <div><span className="text-slate-500">Name:</span> {typedCandidate.name}</div>
-            {typedCandidate.email && <div><span className="text-slate-500">Email:</span> {typedCandidate.email}</div>}
-            {typedCandidate.years_exp && <div><span className="text-slate-500">Experience:</span> {typedCandidate.years_exp} years</div>}
+            <div>
+              <span className="text-slate-500">Name:</span> {typedCandidate.name}
+            </div>
+            {typedCandidate.email && (
+              <div>
+                <span className="text-slate-500">Email:</span> {typedCandidate.email}
+              </div>
+            )}
+            {typedCandidate.experience_level && (
+              <div>
+                <span className="text-slate-500">Experience:</span> {typedCandidate.experience_level}
+              </div>
+            )}
             {typedCandidate.skills?.length > 0 && (
               <div className="col-span-2">
-                <span className="text-slate-500">Skills:</span> {typedCandidate.skills.join(', ')}
+                <span className="text-slate-500">Skills:</span> {typedCandidate.skills.join(", ")}
+              </div>
+            )}
+            {typedCandidate.summary && (
+              <div className="col-span-2">
+                <span className="text-slate-500">Summary:</span> {typedCandidate.summary}
               </div>
             )}
           </div>
@@ -108,7 +155,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             {typedQuestions.map((q) => (
               <details key={q.id} className="group">
                 <summary className="p-4 flex items-start gap-3 cursor-pointer hover:bg-slate-50 transition-colors list-none">
-                  <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 ${q.asked ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`} />
+                  <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 ${q.asked ? "bg-emerald-500 border-emerald-500" : "border-slate-300"}`} />
                   <p className="text-sm text-slate-900 flex-1">{q.question}</p>
                   <span className="text-slate-400 text-xs group-open:rotate-180 transition-transform shrink-0">▼</span>
                 </summary>
@@ -117,31 +164,39 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center text-slate-400 text-sm">
-            No questions yet — they are added when you create a session with AI generation.
-          </div>
+          <div className="p-8 text-center text-slate-400 text-sm">No questions yet — they are added when you create a session with AI generation.</div>
         )}
       </div>
 
-      {/* Code Challenge */}
+      {/* Code Challenges */}
       <div className="card p-5">
-        <h2 className="font-semibold text-slate-900 mb-4">Code Challenge</h2>
-        <ChallengeLinkGenerator
-          sessionId={id}
-          existingChallenge={
-            firstChallenge
-              ? {
-                  id: firstChallenge.id,
-                  title: firstChallenge.title,
-                  links: challengeLinks.map((l) => ({
-                    ...l,
-                    url: `${appUrl}/challenge/${l.token}`,
-                  })),
-                }
-              : undefined
-          }
-        />
+        <h2 className="font-semibold text-slate-900 mb-4">Code Challenges ({typedChallenges.length})</h2>
+        {typedChallenges.length > 0 ? (
+          <div className="space-y-4">
+            {typedChallenges.map((challenge) => (
+              <div key={challenge.id} className="rounded-lg border border-slate-200 p-4">
+                <p className="font-medium text-slate-900">{challenge.title}</p>
+                <p className="mt-1 text-sm text-slate-500 whitespace-pre-wrap">{challenge.problem_statement}</p>
+                <div className="mt-4">
+                  <ChallengeLinkGenerator
+                    sessionId={id}
+                    existingChallenge={{
+                      id: challenge.id,
+                      title: challenge.title,
+                      links: (linksByChallengeId.get(challenge.id) ?? []).map((link) => ({
+                        ...link,
+                        url: `${appUrl}/challenge/${link.token}`,
+                      })),
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">No code challenges generated yet.</p>
+        )}
       </div>
     </div>
-  )
+  );
 }

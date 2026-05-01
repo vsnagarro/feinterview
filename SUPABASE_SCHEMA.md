@@ -1,22 +1,32 @@
 Supabase schema and seed help
 
-This file describes the schema created in supabase/migrations/initial.sql and how to apply it.
+This project now has one canonical schema path.
 
-1. Create a Supabase project (free tier) and open SQL Editor.
-2. Enable extension for UUIDs: CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-3. Run supabase/migrations/initial.sql then supabase/migrations/seed.sql to create tables and seed questions/snippets.
+Apply schema in this order:
 
-Tables created:
-- questions
-- snippets
-- jobs
+1. Run supabase/migrations/0001_initial_schema.sql
+2. Run supabase/migrations/0002_schema_unification.sql
+3. Run supabase/migrations/seed.sql or call the app seed endpoint
+
+Do not apply supabase/migrations/initial.sql directly. It is now only a deprecated stub that prevents accidental reuse of the older incompatible schema.
+
+Canonical tables:
+
+- interviewers
 - candidates
-- challenges
-- submissions
-- ai_requests
+- job_descriptions
+- sessions
+- code_submissions
+- questions
+- code_snippets
+- session_questions
+- code_challenges
+- challenge_links
+- challenge_submissions
+- live_code_state
 
-Use environment variables:
+Environment variables:
+
 - NEXT_PUBLIC_SUPABASE_URL
 - NEXT_PUBLIC_SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY (server-only)
-
+- SUPABASE_SERVICE_ROLE_KEY

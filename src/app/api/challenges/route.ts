@@ -1,27 +1,33 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json()
-  const { sessionId, title, problemStatement, starterCode, supportedLanguages, timeLimitMinutes } = body
+  const body = await request.json();
+  const { sessionId, title, problemStatement, useCase, requirements, workspaceTemplate, sandboxDependencies, starterCode, supportedLanguages, timeLimitMinutes } = body;
 
   const { data, error } = await supabase
-    .from('code_challenges')
+    .from("code_challenges")
     .insert({
       session_id: sessionId,
       title,
       problem_statement: problemStatement,
+      use_case: useCase || null,
+      requirements: Array.isArray(requirements) ? requirements : [],
+      workspace_template: workspaceTemplate || "vanilla",
+      sandbox_dependencies: sandboxDependencies && typeof sandboxDependencies === "object" ? sandboxDependencies : {},
       starter_code: starterCode || null,
-      supported_languages: supportedLanguages ?? ['javascript', 'typescript'],
+      supported_languages: supportedLanguages ?? ["javascript", "typescript"],
       time_limit_minutes: timeLimitMinutes || null,
     })
     .select()
-    .single()
+    .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data, { status: 201 });
 }

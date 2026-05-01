@@ -1,101 +1,85 @@
-type AnthropicLikeResponse = { content: { type: string; text: string }[] }
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-type MessageContent = { type: string; text: string }
-type Message = { role: string; content: MessageContent[] }
+type AnthropicLikeResponse = { content: { type: string; text: string }[] };
+
+type MessageContent = { type: string; text: string };
+type Message = { role: string; content: MessageContent[] };
 
 type MessagesCreateOpts = {
-  model?: string
-  max_tokens?: number
-  messages: Message[]
+  model?: string;
+  max_tokens?: number;
+  messages: Message[];
+};
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function createGeminiClient(apiKey?: string) {
-  const KEY = apiKey || process.env.GEMINI_API_KEY
-  const MODEL = process.env.GEMINI_MODEL || 'models/text-bison-001'
+  const KEY = apiKey || process.env.GEMINI_API_KEY;
+  const MODEL = (process.env.GEMINI_MODEL || "models/gemini-2.5-flash-lite").replace(/^models\//, "");
 
   return {
     async messagesCreate(opts: MessagesCreateOpts) {
-      if (!KEY) throw new Error('GEMINI_API_KEY not set')
-      const model = opts.model || MODEL
-      const url = `https://generativelanguage.googleapis.com/v1/${model}:generate`
+      if (!KEY) throw new Error("GEMINI_API_KEY not set");
+      const model = (opts.model || MODEL).replace(/^models\//, "");
+      const client = new GoogleGenerativeAI(KEY);
+      const generativeModel = client.getGenerativeModel({ model });
 
-      // Build a prompt by concatenating message content texts
-      const combined = opts.messages
-        .map((m) => m.content.map((c) => c.text).join('\n'))
-        .join('\n\n')
+      const combined = opts.messages.map((m) => m.content.map((c) => c.text).join("\n")).join("\n\n");
 
-      const body: Record<string, unknown> = {
-        // The API accepts a "prompt" or structured input depending on version; use simple prompt field
-        prompt: combined,
-        // Map tokens roughly
-        maxOutputTokens: opts.max_tokens || 1024,
-      }
+      const maxAttempts = 3;
+      let lastError: Error | null = null;
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      })
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const result = await generativeModel.generateContent({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: combined }],
+              },
+            ],
+            generationConfig: {
+              maxOutputTokens: opts.max_tokens || 4096,
+              temperature: 0.2,
+              responseMimeType: "application/json",
+            },
+          });
 
-      if (!res.ok) {
-        const txt = await res.text()
-        throw new Error(`Gemini API error: ${res.status} ${txt}`)
-      }
+          const text = result.response.text();
 
-      const json = await res.json() as Record<string, unknown>
-
-      // Try several paths to extract text safely
-      let text = ''
-
-      const candidates = (json as { candidates?: unknown }).candidates
-      if (Array.isArray(candidates) && candidates.length > 0) {
-        const first = candidates[0] as Record<string, unknown>
-        // attempt common fields in a type-safe way
-        if (typeof first['output'] === 'string') {
-          text = first['output'] as string
-        } else if (Array.isArray(first['content'])) {
-          const contentArr = first['content'] as unknown[]
-          const maybe = contentArr[0] as Record<string, unknown> | undefined
-          if (maybe && typeof maybe['text'] === 'string') {
-            text = maybe['text'] as string
+          if (!text) {
+            throw new Error("Gemini API returned an empty response");
           }
+
+          const response: AnthropicLikeResponse = { content: [{ type: "text", text }] };
+          return { content: response.content };
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          const is429 = lastError.message.includes("429") || lastError.message.includes("Too Many Requests");
+          if (is429 && attempt < maxAttempts - 1) {
+            // Extract retryDelay from error message or use exponential backoff
+            const retryMatch = lastError.message.match(/retryDelay":"(\d+)s"/);
+            const delaySec = retryMatch ? parseInt(retryMatch[1], 10) : 15 * (attempt + 1);
+            await sleep(delaySec * 1000);
+            continue;
+          }
+          throw lastError;
         }
       }
 
-      // fallback: try other nested shapes
-      if (!text) {
-        const maybeCandidates = (json as Record<string, unknown>)['candidates']
-        if (Array.isArray(maybeCandidates) && maybeCandidates.length > 0) {
-          const first = maybeCandidates[0] as Record<string, unknown>
-          const content = first['content']
-          if (Array.isArray(content) && content.length > 0) {
-            const msg = content[0] as Record<string, unknown> | undefined
-            if (msg && typeof msg['text'] === 'string') {
-              text = msg['text'] as string
-            }
-          }
-        }
-      }
-
-      // fallback: full stringification
-      if (!text) text = JSON.stringify(json)
-
-      const response: AnthropicLikeResponse = { content: [{ type: 'text', text }] }
-
-      return { content: response.content }
+      throw lastError ?? new Error("Gemini: max retries exceeded");
     },
-  }
+  };
 }
 
 // Adapter to mimic anthropic sdk interface
 export function createGeminiAnthropicLike(apiKey?: string) {
-  const client = createGeminiClient(apiKey)
+  const client = createGeminiClient(apiKey);
   return {
     messages: {
       create: (opts: MessagesCreateOpts) => client.messagesCreate(opts),
     },
-  }
+  };
 }

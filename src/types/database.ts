@@ -59,10 +59,9 @@ export interface Question {
   id: string;
   text: string;
   category?: string;
-  difficulty?: string;
+  level?: string;
   answer: string;
   explanation?: string;
-  tags: string[];
   languages: string[];
   question_type?: string;
   created_by_id?: string;
@@ -84,6 +83,22 @@ export interface CodeSnippet {
   updated_at: string;
 }
 
+export interface CodeChallenge {
+  id: string;
+  session_id?: string;
+  title: string;
+  problem_statement: string;
+  use_case?: string;
+  requirements?: string[];
+  workspace_template?: string;
+  sandbox_dependencies?: Record<string, string>;
+  starter_code?: string;
+  supported_languages?: string[];
+  time_limit_minutes?: number;
+  snippet_id?: string;
+  created_at: string;
+}
+
 // Database type for backwards compatibility with existing components
 export interface Database {
   public: {
@@ -94,6 +109,7 @@ export interface Database {
       job_descriptions: { Row: JobDescription };
       sessions: { Row: Session };
       code_submissions: { Row: CodeSubmission };
+      code_challenges: { Row: CodeChallenge };
       interviewers: { Row: Interviewer };
     };
   };

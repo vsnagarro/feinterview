@@ -18,7 +18,7 @@ interface QuestionsListProps {
   initialQuestions: Question[];
 }
 
-const difficultyVariant = {
+const levelVariant = {
   junior: "success",
   mid: "warning",
   senior: "danger",
@@ -29,58 +29,136 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
   const [questions, setQuestions] = useState(initialQuestions);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     text: "",
     answer: "",
     category: "",
-    difficulty: "mid" as Question["difficulty"],
+    level: "mid" as Question["level"],
     tags: "",
   });
 
-  const filtered = questions.filter(
-    (q) =>
-      q.text.toLowerCase().includes(search.toLowerCase()) || q.category?.toLowerCase().includes(search.toLowerCase()) || q.tags?.some((t: string) => t.toLowerCase().includes(search.toLowerCase())),
-  );
+  // Get unique categories
+  const categories = Array.from(new Set(questions.map((q) => q.category).filter((c): c is string => !!c)));
+
+  // Filter and sort questions
+  const filtered = questions
+    .filter(
+      (q) =>
+        q.text.toLowerCase().includes(search.toLowerCase()) ||
+        q.category?.toLowerCase().includes(search.toLowerCase()) ||
+        q.languages?.some((t: string) => t.toLowerCase().includes(search.toLowerCase())),
+    )
+    .filter((q) => !categoryFilter || q.category === categoryFilter)
+    .filter((q) => !levelFilter || q.level === levelFilter)
+    .sort((a, b) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let aVal: any = a[sortBy as keyof Question];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let bVal: any = b[sortBy as keyof Question];
+
+      if (sortBy === "text") {
+        aVal = (aVal as string)?.toLowerCase() || "";
+        bVal = (bVal as string)?.toLowerCase() || "";
+      }
+
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const { data, error } = await supabase
-      .from("questions")
-      .insert({
-        text: form.text,
-        answer: form.answer,
-        category: form.category || null,
-        difficulty: form.difficulty,
-        tags: form.tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-      })
-      .select()
-      .single();
 
-    setSaving(false);
-    if (error) {
-      toast("Failed to add question", "error");
-    } else {
-      setQuestions((prev) => [data, ...prev]);
-      setForm({ text: "", answer: "", category: "", difficulty: "mid", tags: "" });
-      setShowAdd(false);
-      toast("Question added", "success");
+    try {
+      const response = await fetch("/api/save-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: form.text,
+          answer: form.answer,
+          category: form.category || null,
+          level: form.level,
+          languages: form.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+        }),
+      });
+
+      const result = await response.json();
+      setSaving(false);
+
+      if (!response.ok) {
+        toast(result.error || "Failed to add question", "error");
+      } else {
+        setQuestions((prev) => [result.question, ...prev]);
+        setForm({ text: "", answer: "", category: "", level: "mid", tags: "" });
+        setShowAdd(false);
+        toast("Question added", "success");
+      }
+    } catch (error) {
+      setSaving(false);
+      toast("Error saving question", "error");
     }
   }
 
   return (
     <div>
+      {/* Search Bar */}
       <div className="flex items-center gap-3 mb-4">
-        <Input placeholder="Search questions, topics, tags…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-        <span className="text-sm text-slate-400 ml-auto">{filtered.length} questions</span>
+        <Input placeholder="Search questions, topics, tags…" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 max-w-sm" />
+        <span className="text-sm text-slate-400">{filtered.length} questions</span>
         <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
-          {showAdd ? "Cancel" : "+ Add question"}
+          {showAdd ? "Cancel" : "+ Add"}
         </Button>
+      </div>
+
+      {/* Filters and Sort */}
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <Select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          options={[{ value: "", label: "All Categories" }, ...categories.map((cat) => ({ value: cat, label: cat }))]}
+          className="w-48"
+        />
+        <Select
+          value={levelFilter}
+          onChange={(e) => setLevelFilter(e.target.value)}
+          options={[
+            { value: "", label: "All Levels" },
+            { value: "junior", label: "Junior" },
+            { value: "mid", label: "Mid" },
+            { value: "senior", label: "Senior" },
+          ]}
+          className="w-40"
+        />
+        <Select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          options={[
+            { value: "created_at", label: "Newest" },
+            { value: "text", label: "Title" },
+            { value: "level", label: "Level" },
+            { value: "category", label: "Category" },
+          ]}
+          className="w-40"
+        />
+        <Select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+          options={[
+            { value: "desc", label: "Descending" },
+            { value: "asc", label: "Ascending" },
+          ]}
+          className="w-40"
+        />
       </div>
 
       {showAdd && (
@@ -90,9 +168,9 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
           <div className="grid grid-cols-3 gap-3">
             <Input label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="React hooks" />
             <Select
-              label="Difficulty"
-              value={form.difficulty}
-              onChange={(e) => setForm({ ...form, difficulty: e.target.value as Question["difficulty"] })}
+              label="Level"
+              value={form.level}
+              onChange={(e) => setForm({ ...form, level: e.target.value as Question["level"] })}
               options={[
                 { value: "junior", label: "Junior" },
                 { value: "mid", label: "Mid" },
@@ -114,16 +192,16 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
               <p className="text-sm font-medium text-slate-900 flex-1">{q.text}</p>
               <div className="flex items-center gap-2 shrink-0">
                 {q.category && <span className="text-xs text-slate-400">{q.category}</span>}
-                <Badge variant={difficultyVariant[q.difficulty as keyof typeof difficultyVariant] ?? "default"}>{q.difficulty}</Badge>
+                <Badge variant={levelVariant[q.level as keyof typeof levelVariant] ?? "default"}>{q.level}</Badge>
                 <span className={cn("text-slate-400 transition-transform text-xs", expanded === q.id && "rotate-180")}>▼</span>
               </div>
             </button>
             {expanded === q.id && (
               <div className="px-4 pb-4 border-t border-slate-100">
                 <p className="text-sm text-slate-600 mt-3 whitespace-pre-wrap">{q.answer}</p>
-                {q.tags?.length > 0 && (
+                {q.languages?.length > 0 && (
                   <div className="flex gap-1 mt-3 flex-wrap">
-                    {q.tags.map((tag) => (
+                    {q.languages.map((tag) => (
                       <Badge key={tag}>{tag}</Badge>
                     ))}
                   </div>

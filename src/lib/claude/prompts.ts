@@ -1,4 +1,4 @@
-import type { Difficulty, GenerateQuestionsPayload } from '@/types/app'
+import type { Difficulty, GenerateQuestionsPayload } from "@/types/app";
 
 // This large system prompt is cached via cache_control: { type: 'ephemeral' }
 // Cache TTL is 5 minutes — repeated calls within that window skip re-processing this block
@@ -11,7 +11,7 @@ You must respond with a valid JSON object matching this exact schema:
   "questions": [
     {
       "question": "string — the interview question",
-      "answer": "string — comprehensive model answer (2-5 paragraphs)",
+      "answer": "string — concise model answer (3-6 sentences, under 120 words)",
       "tags": ["string", ...],
       "difficulty": "junior" | "mid" | "senior",
       "topic": "string — e.g. React hooks, CSS, Performance, etc."
@@ -22,8 +22,8 @@ You must respond with a valid JSON object matching this exact schema:
       "title": "string — short title",
       "description": "string — what this snippet demonstrates",
       "language": "javascript" | "typescript" | "css" | "html",
-      "code": "string — actual code, properly formatted",
-      "explanation": "string — what the code does and why it matters",
+      "code": "string — actual code, properly formatted, ideally under 25 lines",
+      "explanation": "string — brief explanation in 2-4 sentences",
       "tags": ["string", ...],
       "difficulty": "junior" | "mid" | "senior"
     }
@@ -32,13 +32,14 @@ You must respond with a valid JSON object matching this exact schema:
 
 QUESTION QUALITY GUIDELINES:
 - Questions should be specific, not vague ("Explain how useEffect cleanup works and when to use it" not "Tell me about React")
-- Answers should be comprehensive but concise — what a strong candidate would actually say
+- Answers should be concise and interview-ready — what a strong candidate would actually say in under 120 words
 - Include a mix of: conceptual understanding, practical application, debugging scenarios, and best practices
 - For senior roles: include system design, performance optimization, architecture questions
 - For junior roles: focus on fundamentals, common patterns, and debugging basics
 
 CODE SNIPPET GUIDELINES:
-- Include realistic, runnable code — not toy examples
+- Include realistic, runnable code — not toy examples, and keep each snippet compact enough for a timed interview exercise
+- Keep each code snippet under 25 lines unless absolutely necessary
 - Cover common interview topics: closures, async/await, event delegation, React patterns, CSS layout, etc.
 - Each snippet should have a clear point: demonstrating a bug, a pattern, or a concept
 - Code should be production-quality style
@@ -48,7 +49,7 @@ TOPICS TO COVER (based on difficulty):
 - Mid: React hooks, performance (memoization, virtualization), CSS advanced (grid/flex/animations), TypeScript, testing
 - Senior: System design, micro-frontends, build tools, web performance (Core Web Vitals), accessibility, security (XSS/CSRF), advanced TypeScript
 
-Respond ONLY with the JSON object. No markdown fences, no preamble, no explanation outside the JSON.`
+Respond ONLY with the JSON object. No markdown fences, no preamble, no explanation outside the JSON.`;
 
 export const CODE_ANALYSIS_SYSTEM_PROMPT = `You are a senior frontend engineer reviewing a candidate's code submission during a technical interview. Your job is to provide constructive, insightful analysis.
 
@@ -74,11 +75,11 @@ ANALYSIS GUIDELINES:
 - Follow-up questions: ask about their design decisions, edge cases they may have missed, how they'd improve it
 - Be constructive — this is to help the interviewer probe deeper, not to judge
 
-Respond ONLY with the JSON object.`
+Respond ONLY with the JSON object.`;
 
 export function buildGeneratePrompt(params: GenerateQuestionsPayload) {
-  const skillsStr = params.skills.length > 0 ? params.skills.join(', ') : 'Not specified'
-  const expStr = params.yearsExp > 0 ? `${params.yearsExp} years` : 'Not specified'
+  const skillsStr = params.skills.length > 0 ? params.skills.join(", ") : "Not specified";
+  const expStr = params.yearsExp > 0 ? `${params.yearsExp} years` : "Not specified";
 
   return {
     systemPrompt: QUESTION_GENERATION_SYSTEM_PROMPT,
@@ -94,15 +95,13 @@ ${params.jobDescription}
 
 TARGET LEVEL: ${params.difficulty}
 
-Generate ${params.count ?? 10} questions and 3 code snippets. Tailor everything to the candidate's background and the specific role requirements.`,
-  }
+Generate ${params.count ?? 10} questions and ${params.challengeCount ?? 10} code snippets that can be used as coding challenges. Tailor everything to the candidate's background and the specific role requirements.
+
+For the snippets, provide a balanced spread across junior, mid, and senior difficulty whenever possible. Each snippet should be substantial enough to be used as an interview coding challenge with a clear problem statement and starter code.`,
+  };
 }
 
-export function buildAnalyzePrompt(params: {
-  problemStatement: string
-  code: string
-  language: string
-}) {
+export function buildAnalyzePrompt(params: { problemStatement: string; code: string; language: string }) {
   return {
     systemPrompt: CODE_ANALYSIS_SYSTEM_PROMPT,
     userMessage: `Analyze this candidate's code submission:
@@ -116,12 +115,12 @@ ${params.code}
 \`\`\`
 
 Provide your analysis.`,
-  }
+  };
 }
 
 export function parseDifficultyFromJD(description: string): Difficulty {
-  const lower = description.toLowerCase()
-  if (lower.includes('senior') || lower.includes('staff') || lower.includes('lead')) return 'senior'
-  if (lower.includes('junior') || lower.includes('entry')) return 'junior'
-  return 'mid'
+  const lower = description.toLowerCase();
+  if (lower.includes("senior") || lower.includes("staff") || lower.includes("lead")) return "senior";
+  if (lower.includes("junior") || lower.includes("entry")) return "junior";
+  return "mid";
 }
