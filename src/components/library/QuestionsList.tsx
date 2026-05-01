@@ -121,7 +121,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
             {expanded === q.id && (
               <div className="px-4 pb-4 border-t border-slate-100">
                 <p className="text-sm text-slate-600 mt-3 whitespace-pre-wrap">{q.answer}</p>
-                {q.tags.length > 0 && (
+                {q.tags?.length > 0 && (
                   <div className="flex gap-1 mt-3 flex-wrap">
                     {q.tags.map((tag) => (
                       <Badge key={tag}>{tag}</Badge>
