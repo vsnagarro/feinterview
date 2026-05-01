@@ -112,7 +112,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
         const updatedWorkspace = deserializeWorkspace(code, workspace?.template || "vanilla", workspace?.files[0]?.code);
         setWorkspace(updatedWorkspace);
         setRuntimeLanguage(language);
-      } catch (e) {
+      } catch {
         // If deserialization fails, update just the active file
         if (workspace && activeFile) {
           setWorkspace(updateWorkspaceFile(workspace, activeFile.path, code));

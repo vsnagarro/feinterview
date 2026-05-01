@@ -9,7 +9,7 @@ interface QuestionWithAugmentation {
   explanation?: string | null;
   simple_explanation?: string | null;
   examples?: string[] | null;
-  code_examples?: any | null;
+  code_examples?: Array<{ language: string; code: string }> | null;
 }
 
 async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promise<{
@@ -72,7 +72,7 @@ Important:
 
   try {
     return JSON.parse(jsonStr);
-  } catch (e) {
+  } catch {
     console.error("Failed to parse Gemini response:", jsonStr);
     throw new Error("Failed to parse Gemini response as JSON");
   }

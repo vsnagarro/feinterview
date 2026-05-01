@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
 import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES } from "@/types/app";
-import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -21,7 +20,6 @@ interface SnippetsListProps {
 }
 
 export function SnippetsList({ initialSnippets }: SnippetsListProps) {
-  const supabase = createClient();
   const [snippets, setSnippets] = useState(initialSnippets);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -94,7 +92,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
         setShowAdd(false);
         toast("Snippet saved", "success");
       }
-    } catch (error) {
+    } catch (_error) {
       setSaving(false);
       toast("Error saving snippet", "error");
     }
@@ -108,7 +106,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
       if (!response.ok) throw new Error("Failed to delete");
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       toast("Snippet deleted", "success");
-    } catch (error) {
+    } catch {
       toast("Error deleting snippet", "error");
     }
   }
@@ -123,7 +121,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
       try {
         const response = await fetch(`/api/code-snippets/${id}`, { method: "DELETE" });
         if (response.ok) deleted++;
-      } catch (e) {
+      } catch {
         // Continue with next
       }
     }

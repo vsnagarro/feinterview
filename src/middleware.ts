@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
-  } catch (err) {
+  } catch {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

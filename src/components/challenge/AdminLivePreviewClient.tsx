@@ -16,7 +16,7 @@ interface AdminLivePreviewClientProps {
   isExpired: boolean;
 }
 
-export function AdminLivePreviewClient({ linkId, linkToken, candidateName, sessionId, expiresAt, isExpired }: AdminLivePreviewClientProps) {
+export function AdminLivePreviewClient({ linkToken, candidateName, sessionId, isExpired }: AdminLivePreviewClientProps) {
   const [copied, setCopied] = useState(false);
 
   const shareableLink = typeof window !== "undefined" ? `${window.location.origin}/challenge/${linkToken}` : `https://yourapp.com/challenge/${linkToken}`;

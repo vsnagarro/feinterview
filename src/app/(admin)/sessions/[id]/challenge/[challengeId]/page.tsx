@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AdminLivePreviewClient } from "@/components/challenge/AdminLivePreviewClient";
-import { Badge } from "@/components/ui/Badge";
-import { timeUntil, isExpired } from "@/lib/utils";
+import { isExpired } from "@/lib/utils";
 
 export default async function AdminLiveViewPage({ params }: { params: Promise<{ id: string; challengeId: string }> }) {
   const { id: sessionId, challengeId } = await params;

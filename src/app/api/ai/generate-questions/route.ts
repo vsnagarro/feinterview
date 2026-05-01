@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   const supabase = await createServiceClient();
 
   const body: GenerateQuestionsPayload = await request.json();
-  const { systemPrompt, userMessage } = buildGeneratePrompt(body);
+  const { systemPrompt: _systemPrompt, userMessage: _userMessage } = buildGeneratePrompt(body);
 
   const ai = getAIClient();
   const model = process.env.GEMINI_API_KEY ? process.env.GEMINI_MODEL || "models/gemini-2.0-flash" : process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";

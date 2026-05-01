@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Question ID required" }, { status: 400 });
     }
 
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
     if (answer !== undefined) updateData.answer = answer;
     if (explanation !== undefined) updateData.explanation = explanation;
     if (simple_explanation !== undefined) updateData.simple_explanation = simple_explanation;

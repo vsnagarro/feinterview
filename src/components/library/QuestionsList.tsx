@@ -10,7 +10,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
-import { createClient } from "@/lib/supabase/client";
 
 type Question = Database["public"]["Tables"]["questions"]["Row"];
 
@@ -25,7 +24,6 @@ const levelVariant = {
 } as const;
 
 export function QuestionsList({ initialQuestions }: QuestionsListProps) {
-  const supabase = createClient();
   const [questions, setQuestions] = useState(initialQuestions);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -36,7 +34,6 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [augmenting, setAugmenting] = useState(false);
-  const [augmentedIds, setAugmentedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
@@ -74,10 +71,9 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
               : q,
           ),
         );
-        setAugmentedIds((prev) => new Set([...prev, questionId]));
         toast("Question augmented with AI-generated explanations and examples", "success");
       }
-    } catch (error) {
+    } catch {
       toast("Error augmenting question", "error");
     } finally {
       setAugmenting(false);
@@ -103,10 +99,9 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
         const allResponse = await fetch("/api/questions");
         const allQuestions = await allResponse.json();
         setQuestions(allQuestions);
-        setAugmentedIds(new Set(questionIds));
         toast(`${result.augmented} of ${result.total} questions augmented successfully`, "success");
       }
-    } catch (error) {
+    } catch {
       toast("Error augmenting questions", "error");
     } finally {
       setAugmenting(false);
@@ -121,7 +116,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
       if (!response.ok) throw new Error("Failed to delete");
       setQuestions((prev) => prev.filter((q) => q.id !== questionId));
       toast("Question deleted", "success");
-    } catch (error) {
+    } catch {
       toast("Error deleting question", "error");
     }
   }
@@ -136,7 +131,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
       try {
         const response = await fetch(`/api/questions/${id}`, { method: "DELETE" });
         if (response.ok) deleted++;
-      } catch (e) {
+      } catch {
         // Continue with next
       }
     }
@@ -335,7 +330,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
               <div className="flex items-center gap-2 shrink-0">
                 {q.category && <span className="text-xs text-slate-400">{q.category}</span>}
                 <Badge variant={levelVariant[q.level as keyof typeof levelVariant] ?? "default"}>{q.level}</Badge>
-                {(q as any).simple_explanation && <Badge variant="success">✓ Augmented</Badge>}
+                {(q as unknown as { simple_explanation?: string }).simple_explanation && <Badge variant="success">✓ Augmented</Badge>}
                 <button onClick={() => handleDeleteQuestion(q.id)} className="text-slate-400 hover:text-red-500 text-xs">
                   🗑️
                 </button>
@@ -350,18 +345,18 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   <strong>Answer:</strong> {q.answer}
                 </p>
 
-                {(q as any).simple_explanation && (
+                {(q as unknown as { simple_explanation?: string }) && (
                   <div className="mt-4 bg-blue-50 p-3 rounded">
                     <p className="text-xs font-semibold text-blue-900">Simple Explanation:</p>
-                    <p className="text-xs text-blue-800 mt-1">{(q as any).simple_explanation}</p>
+                    <p className="text-xs text-blue-800 mt-1">{(q as unknown as { simple_explanation?: string }).simple_explanation}</p>
                   </div>
                 )}
 
-                {(q as any).examples && (q as any).examples.length > 0 && (
+                {(q as unknown as { examples?: string[] })?.examples && (q as unknown as { examples?: string[] }).examples!.length > 0 && (
                   <div className="mt-3 bg-green-50 p-3 rounded">
                     <p className="text-xs font-semibold text-green-900">Examples:</p>
                     <ul className="text-xs text-green-800 mt-2 space-y-1">
-                      {(q as any).examples.map((ex: string, i: number) => (
+                      {(q as unknown as { examples?: string[] }).examples!.map((ex: string, i: number) => (
                         <li key={i} className="list-disc list-inside">
                           {ex}
                         </li>
@@ -370,21 +365,22 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   </div>
                 )}
 
-                {(q as any).code_examples && (q as any).code_examples.length > 0 && (
-                  <div className="mt-3 bg-purple-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-purple-900">Code Examples:</p>
-                    <div className="mt-2 space-y-2">
-                      {(q as any).code_examples.map((ex: any, i: number) => (
-                        <div key={i} className="bg-slate-900 p-2 rounded text-xs">
-                          <p className="text-purple-300 font-semibold mb-1">{ex.language}</p>
-                          <pre className="text-slate-300 overflow-x-auto text-[10px]">
-                            <code>{ex.code}</code>
-                          </pre>
-                        </div>
-                      ))}
+                {(q as unknown as { code_examples?: Array<{ language: string; code: string }> })?.code_examples &&
+                  (q as unknown as { code_examples?: Array<{ language: string; code: string }> }).code_examples!.length > 0 && (
+                    <div className="mt-3 bg-purple-50 p-3 rounded">
+                      <p className="text-xs font-semibold text-purple-900">Code Examples:</p>
+                      <div className="mt-2 space-y-2">
+                        {(q as unknown as { code_examples?: Array<{ language: string; code: string }> }).code_examples!.map((ex: { language: string; code: string }, i: number) => (
+                          <div key={i} className="bg-slate-900 p-2 rounded text-xs">
+                            <p className="text-purple-300 font-semibold mb-1">{ex.language}</p>
+                            <pre className="text-slate-300 overflow-x-auto text-[10px]">
+                              <code>{ex.code}</code>
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {q.languages?.length > 0 && (
                   <div className="flex gap-1 mt-3 flex-wrap">
@@ -394,7 +390,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   </div>
                 )}
 
-                {!(q as any).simple_explanation && (
+                {!(q as unknown as { simple_explanation?: string })?.simple_explanation && (
                   <Button size="sm" variant="secondary" loading={augmenting} onClick={() => handleAugmentQuestion(q.id)} className="mt-4">
                     ✨ Augment with AI
                   </Button>
