@@ -35,6 +35,10 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [augmenting, setAugmenting] = useState(false);
+  const [augmentedIds, setAugmentedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     text: "",
     answer: "",
@@ -42,6 +46,105 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
     level: "mid" as Question["level"],
     tags: "",
   });
+
+  async function handleAugmentQuestion(questionId: string) {
+    setAugmenting(true);
+    try {
+      const response = await fetch("/api/questions/augment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionIds: [questionId] }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast(result.error || "Failed to augment question", "error");
+      } else {
+        // Update the question in the local state
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.id === questionId
+              ? {
+                  ...q,
+                  simple_explanation: result.results[0]?.data?.simple_explanation,
+                  examples: result.results[0]?.data?.examples,
+                  code_examples: result.results[0]?.data?.code_examples,
+                }
+              : q,
+          ),
+        );
+        setAugmentedIds((prev) => new Set([...prev, questionId]));
+        toast("Question augmented with AI-generated explanations and examples", "success");
+      }
+    } catch (error) {
+      toast("Error augmenting question", "error");
+    } finally {
+      setAugmenting(false);
+    }
+  }
+
+  async function handleAugmentAll() {
+    setAugmenting(true);
+    try {
+      const questionIds = filtered.map((q) => q.id);
+      const response = await fetch("/api/questions/augment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionIds }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast(result.error || "Failed to augment questions", "error");
+      } else {
+        // Reload questions from the API
+        const allResponse = await fetch("/api/questions");
+        const allQuestions = await allResponse.json();
+        setQuestions(allQuestions);
+        setAugmentedIds(new Set(questionIds));
+        toast(`${result.augmented} of ${result.total} questions augmented successfully`, "success");
+      }
+    } catch (error) {
+      toast("Error augmenting questions", "error");
+    } finally {
+      setAugmenting(false);
+    }
+  }
+
+  async function handleDeleteQuestion(questionId: string) {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+
+    try {
+      const response = await fetch(`/api/questions/${questionId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete");
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      toast("Question deleted", "success");
+    } catch (error) {
+      toast("Error deleting question", "error");
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} question(s)?`)) return;
+
+    setDeleting(true);
+    let deleted = 0;
+    for (const id of selectedIds) {
+      try {
+        const response = await fetch(`/api/questions/${id}`, { method: "DELETE" });
+        if (response.ok) deleted++;
+      } catch (e) {
+        // Continue with next
+      }
+    }
+    setDeleting(false);
+    setQuestions((prev) => prev.filter((q) => !selectedIds.has(q.id)));
+    setSelectedIds(new Set());
+    toast(`Deleted ${deleted} question(s)`, "success");
+  }
 
   // Get unique categories
   const categories = Array.from(new Set(questions.map((q) => q.category).filter((c): c is string => !!c)));
@@ -115,6 +218,27 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
       <div className="flex items-center gap-3 mb-4">
         <Input placeholder="Search questions, topics, tags…" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 max-w-sm" />
         <span className="text-sm text-slate-400">{filtered.length} questions</span>
+        {selectedIds.size > 0 && (
+          <>
+            <span className="text-sm text-slate-400">{selectedIds.size} selected</span>
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={deleting}
+              onClick={() => {
+                setSelectedIds(new Set(filtered.filter((q) => !selectedIds.has(q.id)).map((q) => q.id)));
+              }}
+            >
+              Select all
+            </Button>
+            <Button size="sm" variant="danger" loading={deleting} onClick={handleDeleteSelected}>
+              🗑️ Delete selected
+            </Button>
+          </>
+        )}
+        <Button size="sm" variant="secondary" loading={augmenting} onClick={handleAugmentAll} disabled={filtered.length === 0}>
+          ✨ Augment all
+        </Button>
         <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
           {showAdd ? "Cancel" : "+ Add"}
         </Button>
@@ -188,23 +312,92 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
       <div className="space-y-2">
         {filtered.map((q) => (
           <div key={q.id} className="card overflow-hidden">
-            <button className="w-full text-left p-4 flex items-start justify-between gap-3 hover:bg-slate-50 transition-colors" onClick={() => setExpanded(expanded === q.id ? null : q.id)}>
-              <p className="text-sm font-medium text-slate-900 flex-1">{q.text}</p>
+            <div className="w-full p-4 flex items-start justify-between gap-3 hover:bg-slate-50 transition-colors border-b border-slate-100">
+              <div className="flex items-start gap-3 flex-1">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(q.id)}
+                  onChange={(e) => {
+                    const newSet = new Set(selectedIds);
+                    if (e.target.checked) {
+                      newSet.add(q.id);
+                    } else {
+                      newSet.delete(q.id);
+                    }
+                    setSelectedIds(newSet);
+                  }}
+                  className="mt-1"
+                />
+                <button className="text-left flex-1" onClick={() => setExpanded(expanded === q.id ? null : q.id)}>
+                  <p className="text-sm font-medium text-slate-900">{q.text}</p>
+                </button>
+              </div>
               <div className="flex items-center gap-2 shrink-0">
                 {q.category && <span className="text-xs text-slate-400">{q.category}</span>}
                 <Badge variant={levelVariant[q.level as keyof typeof levelVariant] ?? "default"}>{q.level}</Badge>
-                <span className={cn("text-slate-400 transition-transform text-xs", expanded === q.id && "rotate-180")}>▼</span>
+                {(q as any).simple_explanation && <Badge variant="success">✓ Augmented</Badge>}
+                <button onClick={() => handleDeleteQuestion(q.id)} className="text-slate-400 hover:text-red-500 text-xs">
+                  🗑️
+                </button>
+                <span className={cn("text-slate-400 transition-transform text-xs", expanded === q.id && "rotate-180")} onClick={() => setExpanded(expanded === q.id ? null : q.id)}>
+                  ▼
+                </span>
               </div>
-            </button>
+            </div>
             {expanded === q.id && (
               <div className="px-4 pb-4 border-t border-slate-100">
-                <p className="text-sm text-slate-600 mt-3 whitespace-pre-wrap">{q.answer}</p>
+                <p className="text-sm text-slate-600 mt-3 whitespace-pre-wrap">
+                  <strong>Answer:</strong> {q.answer}
+                </p>
+
+                {(q as any).simple_explanation && (
+                  <div className="mt-4 bg-blue-50 p-3 rounded">
+                    <p className="text-xs font-semibold text-blue-900">Simple Explanation:</p>
+                    <p className="text-xs text-blue-800 mt-1">{(q as any).simple_explanation}</p>
+                  </div>
+                )}
+
+                {(q as any).examples && (q as any).examples.length > 0 && (
+                  <div className="mt-3 bg-green-50 p-3 rounded">
+                    <p className="text-xs font-semibold text-green-900">Examples:</p>
+                    <ul className="text-xs text-green-800 mt-2 space-y-1">
+                      {(q as any).examples.map((ex: string, i: number) => (
+                        <li key={i} className="list-disc list-inside">
+                          {ex}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(q as any).code_examples && (q as any).code_examples.length > 0 && (
+                  <div className="mt-3 bg-purple-50 p-3 rounded">
+                    <p className="text-xs font-semibold text-purple-900">Code Examples:</p>
+                    <div className="mt-2 space-y-2">
+                      {(q as any).code_examples.map((ex: any, i: number) => (
+                        <div key={i} className="bg-slate-900 p-2 rounded text-xs">
+                          <p className="text-purple-300 font-semibold mb-1">{ex.language}</p>
+                          <pre className="text-slate-300 overflow-x-auto text-[10px]">
+                            <code>{ex.code}</code>
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {q.languages?.length > 0 && (
                   <div className="flex gap-1 mt-3 flex-wrap">
                     {q.languages.map((tag) => (
                       <Badge key={tag}>{tag}</Badge>
                     ))}
                   </div>
+                )}
+
+                {!(q as any).simple_explanation && (
+                  <Button size="sm" variant="secondary" loading={augmenting} onClick={() => handleAugmentQuestion(q.id)} className="mt-4">
+                    ✨ Augment with AI
+                  </Button>
                 )}
               </div>
             )}

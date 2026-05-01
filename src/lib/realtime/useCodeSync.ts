@@ -6,9 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 interface UseCodeSyncOptions {
   linkId?: string;
   onConnected?: () => void;
+  onCodeUpdate?: (code: string, language: string) => void;
 }
 
-export function useCodeSync({ linkId, onConnected }: UseCodeSyncOptions) {
+export function useCodeSync({ linkId, onConnected, onCodeUpdate }: UseCodeSyncOptions) {
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -20,14 +21,19 @@ export function useCodeSync({ linkId, onConnected }: UseCodeSyncOptions) {
     const channel = supabase.channel(`challenge:${linkId}`);
     channelRef.current = channel;
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") onConnected?.();
-    });
+    // Listen for incoming code updates (e.g., from admin or other users)
+    channel
+      .on("broadcast", { event: "code_update" }, ({ payload }) => {
+        onCodeUpdate?.(payload.code, payload.language);
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") onConnected?.();
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [linkId, supabase, onConnected]);
+  }, [linkId, supabase, onConnected, onCodeUpdate]);
 
   const syncCode = useCallback(
     (code: string, language: string) => {

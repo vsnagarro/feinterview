@@ -31,6 +31,8 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -98,12 +100,53 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
     }
   }
 
+  async function handleDeleteSnippet(snippetId: string) {
+    if (!confirm("Are you sure you want to delete this snippet?")) return;
+
+    try {
+      const response = await fetch(`/api/code-snippets/${snippetId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete");
+      setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
+      toast("Snippet deleted", "success");
+    } catch (error) {
+      toast("Error deleting snippet", "error");
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} snippet(s)?`)) return;
+
+    setDeleting(true);
+    let deleted = 0;
+    for (const id of selectedIds) {
+      try {
+        const response = await fetch(`/api/code-snippets/${id}`, { method: "DELETE" });
+        if (response.ok) deleted++;
+      } catch (e) {
+        // Continue with next
+      }
+    }
+    setDeleting(false);
+    setSnippets((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+    setSelectedIds(new Set());
+    toast(`Deleted ${deleted} snippet(s)`, "success");
+  }
+
   return (
     <div>
       <div className="space-y-3 mb-4">
         <div className="flex items-center gap-3">
           <Input placeholder="Search snippets, languages, tags…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
           <span className="text-sm text-slate-400 ml-auto">{filtered.length} snippets</span>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-sm text-slate-400">{selectedIds.size} selected</span>
+              <Button size="sm" variant="danger" loading={deleting} onClick={handleDeleteSelected}>
+                🗑️ Delete selected
+              </Button>
+            </>
+          )}
           <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
             {showAdd ? "Cancel" : "+ Add snippet"}
           </Button>
@@ -197,16 +240,35 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
       <div className="space-y-2">
         {filtered.map((s) => (
           <div key={s.id} className="card overflow-hidden">
-            <button className="w-full text-left p-4 flex items-start justify-between gap-3 hover:bg-slate-50 transition-colors" onClick={() => setExpanded(expanded === s.id ? null : s.id)}>
-              <div>
-                <p className="text-sm font-medium text-slate-900">{s.title}</p>
-                {s.description && <p className="text-xs text-slate-500 mt-0.5">{s.description}</p>}
+            <div className="w-full p-4 flex items-start justify-between gap-3 hover:bg-slate-50 transition-colors border-b border-slate-100">
+              <div className="flex items-start gap-3 flex-1">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(s.id)}
+                  onChange={(e) => {
+                    const newSet = new Set(selectedIds);
+                    if (e.target.checked) {
+                      newSet.add(s.id);
+                    } else {
+                      newSet.delete(s.id);
+                    }
+                    setSelectedIds(newSet);
+                  }}
+                  className="mt-1"
+                />
+                <button className="text-left flex-1" onClick={() => setExpanded(expanded === s.id ? null : s.id)}>
+                  <p className="text-sm font-medium text-slate-900">{s.title}</p>
+                  {s.description && <p className="text-xs text-slate-500 mt-0.5">{s.description}</p>}
+                </button>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge variant="info">{s.language}</Badge>
                 <Badge variant={s.difficulty === "senior" ? "danger" : s.difficulty === "junior" ? "success" : "warning"}>{s.difficulty}</Badge>
+                <button onClick={() => handleDeleteSnippet(s.id)} className="text-slate-400 hover:text-red-500 text-xs">
+                  🗑️
+                </button>
               </div>
-            </button>
+            </div>
             {expanded === s.id && (
               <div className="border-t border-slate-100">
                 <div className="h-48">

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { AdminCodeViewer } from "@/components/admin/AdminCodeViewer";
+import { AdminLivePreviewClient } from "@/components/challenge/AdminLivePreviewClient";
 import { Badge } from "@/components/ui/Badge";
 import { timeUntil, isExpired } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ export default async function AdminLiveViewPage({ params }: { params: Promise<{ 
   const { data: linkData } = await supabase.from("challenge_links").select("*").eq("id", challengeId).single();
 
   if (!linkData) notFound();
-  const link = linkData as { id: string; challenge_id: string; expires_at: string; is_active: boolean; opened_at: string | null; candidate_name: string | null };
+  const link = linkData as { id: string; challenge_id: string; token: string; expires_at: string; is_active: boolean; opened_at: string | null; candidate_name: string | null };
 
   const { data: challengeData } = await supabase.from("code_challenges").select("*").eq("id", link.challenge_id).single();
   const challenge = challengeData as { id: string; title: string; problem_statement: string; session_id: string | null } | null;
@@ -37,25 +37,13 @@ export default async function AdminLiveViewPage({ params }: { params: Promise<{ 
   const expired = isExpired(link.expires_at);
 
   return (
-    <div className="p-6 flex flex-col h-full min-h-screen">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link href={`/sessions/${sessionId}`} className="text-sm text-slate-500 hover:text-sky-600">
-              ← Session
-            </Link>
-          </div>
-          <h1 className="text-xl font-bold text-slate-900">Live Code View — {challenge.title}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {expired ? <Badge variant="danger">Link expired</Badge> : <Badge variant="success">Active — {timeUntil(link.expires_at)} left</Badge>}
-          {link.opened_at ? <Badge variant="info">Candidate connected</Badge> : <Badge variant="default">Waiting for candidate</Badge>}
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <AdminCodeViewer linkId={link.id} problemStatement={challenge.problem_statement} candidateName={link.candidate_name ?? candidateName} />
-      </div>
-    </div>
+    <AdminLivePreviewClient
+      linkId={link.id}
+      linkToken={link.token}
+      candidateName={link.candidate_name ?? candidateName ?? null}
+      sessionId={sessionId}
+      expiresAt={link.expires_at}
+      isExpired={expired}
+    />
   );
 }
