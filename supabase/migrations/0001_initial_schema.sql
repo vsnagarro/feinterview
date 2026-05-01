@@ -248,6 +248,7 @@ create policy "admin_all" on code_snippets         for all to authenticated usin
 create policy "admin_all" on candidates            for all to authenticated using (true) with check (true);
 create policy "admin_all" on job_descriptions      for all to authenticated using (true) with check (true);
 create policy "admin_all" on interview_sessions    for all to authenticated using (true) with check (true);
+create policy "admin_all" on sessions              for all to authenticated using (true) with check (true);
 create policy "admin_all" on session_questions     for all to authenticated using (true) with check (true);
 create policy "admin_all" on code_challenges       for all to authenticated using (true) with check (true);
 create policy "admin_all" on challenge_links       for all to authenticated using (true) with check (true);
