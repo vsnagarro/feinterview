@@ -1,11 +1,20 @@
 type AnthropicLikeResponse = { content: { type: string; text: string }[] }
 
+type MessageContent = { type: string; text: string }
+type Message = { role: string; content: MessageContent[] }
+
+type MessagesCreateOpts = {
+  model?: string
+  max_tokens?: number
+  messages: Message[]
+}
+
 export function createGeminiClient(apiKey?: string) {
   const KEY = apiKey || process.env.GEMINI_API_KEY
   const MODEL = process.env.GEMINI_MODEL || 'models/text-bison-001'
 
   return {
-    async messagesCreate(opts: { model?: string; max_tokens?: number; messages: { role: string; content: { type: string; text: string }[] }[] }) {
+    async messagesCreate(opts: MessagesCreateOpts) {
       if (!KEY) throw new Error('GEMINI_API_KEY not set')
       const model = opts.model || MODEL
       const url = `https://generativelanguage.googleapis.com/v1/${model}:generate`
@@ -15,7 +24,7 @@ export function createGeminiClient(apiKey?: string) {
         .map((m) => m.content.map((c) => c.text).join('\n'))
         .join('\n\n')
 
-      const body: any = {
+      const body: Record<string, unknown> = {
         // The API accepts a "prompt" or structured input depending on version; use simple prompt field
         prompt: combined,
         // Map tokens roughly
@@ -36,7 +45,7 @@ export function createGeminiClient(apiKey?: string) {
         throw new Error(`Gemini API error: ${res.status} ${txt}`)
       }
 
-      const json = await res.json()
+      const json = await res.json() as Record<string, unknown>
 
       // Try several paths to extract text
       let text = ''
@@ -63,7 +72,7 @@ export function createGeminiAnthropicLike(apiKey?: string) {
   const client = createGeminiClient(apiKey)
   return {
     messages: {
-      create: (opts: any) => client.messagesCreate(opts),
+      create: (opts: MessagesCreateOpts) => client.messagesCreate(opts),
     },
   }
 }
