@@ -1,5 +1,6 @@
 {
   "name": "fe-interview",
+  "type": "module",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -10,6 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@google/generative-ai": "^0.24.1",
     "@monaco-editor/react": "^4.7.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.4",

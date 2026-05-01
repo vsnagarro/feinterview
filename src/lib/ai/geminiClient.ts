@@ -47,16 +47,39 @@ export function createGeminiClient(apiKey?: string) {
 
       const json = await res.json() as Record<string, unknown>
 
-      // Try several paths to extract text
+      // Try several paths to extract text safely
       let text = ''
-      // common GL shape: { candidates: [{ output: '...' }] }
-      if (json.candidates && json.candidates.length) {
-        text = json.candidates[0].output || json.candidates[0].content?.[0]?.text || ''
+
+      const candidates = (json as { candidates?: unknown }).candidates
+      if (Array.isArray(candidates) && candidates.length > 0) {
+        const first = candidates[0] as Record<string, unknown>
+        // attempt common fields in a type-safe way
+        if (typeof first['output'] === 'string') {
+          text = first['output'] as string
+        } else if (Array.isArray(first['content'])) {
+          const contentArr = first['content'] as unknown[]
+          const maybe = contentArr[0] as Record<string, unknown> | undefined
+          if (maybe && typeof maybe['text'] === 'string') {
+            text = maybe['text'] as string
+          }
+        }
       }
-      // older shape: { candidates: [{ content: [{ text: '...' }] }] }
-      if (!text && json.candidates?.[0]?.content?.[0]?.text) {
-        text = json.candidates[0].content[0].text
+
+      // fallback: try other nested shapes
+      if (!text) {
+        const maybeCandidates = (json as Record<string, unknown>)['candidates']
+        if (Array.isArray(maybeCandidates) && maybeCandidates.length > 0) {
+          const first = maybeCandidates[0] as Record<string, unknown>
+          const content = first['content']
+          if (Array.isArray(content) && content.length > 0) {
+            const msg = content[0] as Record<string, unknown> | undefined
+            if (msg && typeof msg['text'] === 'string') {
+              text = msg['text'] as string
+            }
+          }
+        }
       }
+
       // fallback: full stringification
       if (!text) text = JSON.stringify(json)
 
