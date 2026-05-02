@@ -179,17 +179,44 @@ export function SessionForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename: resumeFile.name, contentType: resumeFile.type }),
     });
+    const contentType = resumeFile.type || "application/octet-stream";
+
     if (!signRes.ok) {
+      // If server returned a fallback instruction (202 Accepted) it may include a `fallbackUpload` URL
+      if (signRes.status === 202) {
+        const fallback = await signRes.json().catch(() => ({}));
+        const fallbackUpload = fallback?.fallbackUpload ?? "/api/candidates/upload-resume";
+
+        // Use multipart/form-data upload to server fallback
+        const form = new FormData();
+        form.append("file", resumeFile);
+        if (candidateId) form.append("candidateId", candidateId);
+
+        const fallbackRes = await fetch(fallbackUpload, {
+          method: "POST",
+          body: form,
+        });
+
+        if (!fallbackRes.ok) {
+          const txt = await fallbackRes.text().catch(() => "Fallback upload failed");
+          throw new Error(typeof txt === "string" ? txt : "Fallback upload failed");
+        }
+
+        const json = await fallbackRes.json().catch(() => ({}));
+        return json?.url ?? json?.publicUrl ?? json?.filename ?? null;
+      }
+
       const err = await signRes.text().catch(() => "Failed to get signed url");
       throw new Error(typeof err === "string" ? err : "Failed to get signed url");
     }
+
     const { uploadUrl, publicUrl, filename } = await signRes.json();
 
     // 2. PUT the file directly to the signed URL
     const putRes = await fetch(uploadUrl, {
       method: "PUT",
       body: resumeFile,
-      headers: { "Content-Type": resumeFile.type || "application/octet-stream" },
+      headers: { "Content-Type": contentType },
     });
     if (!putRes.ok) {
       const text = await putRes.text().catch(() => "");
