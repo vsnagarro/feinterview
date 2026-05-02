@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const supabase = await createServiceClient();
 
   const body = await request.json();
-  const { candidateName, candidateEmail, candidateNotes, skills, yearsExp, jdTitle, jdDescription } = body;
+  const { candidateName, candidateEmail, candidateNotes, skills, yearsExp, jdTitle, jdDescription, resumeUrl, extraChecks, targetLevel, trickiness } = body;
 
   // Create a default interviewer if none exists
   const defaultInterviewerId = "00000000-0000-0000-0000-000000000001";
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       .single();
   }
 
-  // Create candidate with created_by_id
+  // Create candidate with created_by_id; include resume_url if provided
   const { data: candidate, error: candidateError } = await supabase
     .from("candidates")
     .insert({
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       skills: skills || [],
       experience_level: mapExperienceLevel(Number(yearsExp) || 0),
       summary: candidateNotes || null,
+      resume_url: resumeUrl || null,
       created_by_id: defaultInterviewerId,
     })
     .select()
@@ -105,12 +106,11 @@ export async function POST(request: Request) {
     jdId = jd?.id;
   }
 
-  // Create session with challenge token
+  // Create session with challenge token (include new session fields)
   const token = randomBytes(16).toString("hex");
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour default
 
-  // Use sessions table with correct schema
   const { data: session, error: sessionError } = await supabase
     .from("sessions")
     .insert({
@@ -121,6 +121,9 @@ export async function POST(request: Request) {
       languages: ["javascript", "typescript"],
       status: "active",
       expires_at: expiresAt.toISOString(),
+      extra_checks: extraChecks || null,
+      target_level: targetLevel || null,
+      trickiness: trickiness ? Number(trickiness) : null,
     })
     .select()
     .single();

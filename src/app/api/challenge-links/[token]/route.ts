@@ -148,8 +148,8 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ token: 
   const whereField = isUUID(token) ? "id" : "token";
 
   try {
-    // Soft-delete: mark inactive for audit/history
-    const { data, error } = await supabase.from("challenge_links").update({ is_active: false }).eq(whereField, token).select().single();
+    // HARD DELETE the link row (per request)
+    const { data, error } = await supabase.from("challenge_links").delete().eq(whereField, token).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true, link: data });
   } catch (err) {

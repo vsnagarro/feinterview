@@ -12,6 +12,7 @@ You must respond with a valid JSON object matching this exact schema:
     {
       "question": "string — the interview question",
       "answer": "string — concise model answer (3-6 sentences, under 120 words)",
+      "explanation": "string — brief explanation or analogous example",
       "tags": ["string", ...],
       "difficulty": "junior" | "mid" | "senior",
       "topic": "string — e.g. React hooks, CSS, Performance, etc."
@@ -78,8 +79,10 @@ ANALYSIS GUIDELINES:
 Respond ONLY with the JSON object.`;
 
 export function buildGeneratePrompt(params: GenerateQuestionsPayload) {
-  const skillsStr = params.skills.length > 0 ? params.skills.join(", ") : "Not specified";
-  const expStr = params.yearsExp > 0 ? `${params.yearsExp} years` : "Not specified";
+  const skillsStr = params.skills && params.skills.length > 0 ? params.skills.join(", ") : "Not specified";
+  const expStr = params.yearsExp && params.yearsExp > 0 ? `${params.yearsExp} years` : "Not specified";
+  const extraChecks = params.extraChecks ? params.extraChecks : "None specified";
+  const trickiness = typeof params.trickiness !== "undefined" && params.trickiness !== null ? `Trickiness score: ${params.trickiness}` : "";
 
   return {
     systemPrompt: QUESTION_GENERATION_SYSTEM_PROMPT,
@@ -89,15 +92,15 @@ CANDIDATE:
 - Name: ${params.candidateName}
 - Experience: ${expStr}
 - Skills: ${skillsStr}
+- Extra checks: ${extraChecks}
+${trickiness ? `- ${trickiness}` : ""}
 
 JOB DESCRIPTION:
 ${params.jobDescription}
 
-TARGET LEVEL: ${params.difficulty}
+TARGET LEVEL: ${params.difficulty || params.targetLevel || "Not specified"}
 
-Generate ${params.count ?? 10} questions and ${params.challengeCount ?? 10} code snippets that can be used as coding challenges. Tailor everything to the candidate's background and the specific role requirements.
-
-For the snippets, provide a balanced spread across junior, mid, and senior difficulty whenever possible. Each snippet should be substantial enough to be used as an interview coding challenge with a clear problem statement and starter code.`,
+Generate ${params.count ?? 10} questions and ${params.challengeCount ?? 10} code snippets that can be used as coding challenges. For each question include a concise answer, a short explanation or analogous example, and tags. Tailor everything to the candidate's background, job description, and extra checks. For the snippets, provide starter code and a brief explanation. Ensure diversity across difficulty levels when applicable.`,
   };
 }
 

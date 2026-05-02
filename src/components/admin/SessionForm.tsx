@@ -29,6 +29,7 @@ export function SessionForm() {
     title: "",
     description: "",
   });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("mid");
   const [questionCount, setQuestionCount] = useState("10");
   const challengeCount = 10;
@@ -87,6 +88,22 @@ export function SessionForm() {
       });
 
       if (!genRes.ok) {
+  async function uploadResume(candidateId?: string) {
+    if (!resumeFile) return null;
+    const fd = new FormData();
+    fd.append("file", resumeFile);
+    if (candidateId) fd.append("candidateId", candidateId);
+    const res = await fetch("/api/candidates/upload-resume", {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(err?.error || "Upload failed");
+    }
+    const data = await res.json();
+    return data.url ?? null;
+  }
         const errorText = await genRes.text();
         throw new Error(errorText || "Failed to generate interview content");
       }
