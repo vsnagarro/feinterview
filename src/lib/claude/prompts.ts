@@ -11,11 +11,14 @@ You must respond with a valid JSON object matching this exact schema:
   "questions": [
     {
       "question": "string — the interview question",
-      "answer": "string — concise model answer (3-6 sentences, under 120 words)",
-      "explanation": "string — brief explanation or analogous example",
+      "answer": "string — concise answer suitable for candidate view (2-4 sentences)",
+      "topic": "string — topic name",
       "tags": ["string", ...],
       "difficulty": "junior" | "mid" | "senior",
-      "topic": "string — e.g. React hooks, CSS, Performance, etc."
+      "topicExplanation": "string — explain the topic in simple terms (for admin),",
+      "highlights": ["string", ...],
+      "analogy": "string — short analogy",
+      "codeExamples": [{ "language": "javascript", "code": "string" }]
     }
   ],
   "snippets": [
@@ -23,10 +26,12 @@ You must respond with a valid JSON object matching this exact schema:
       "title": "string — short title",
       "description": "string — what this snippet demonstrates",
       "language": "javascript" | "typescript" | "css" | "html",
-      "code": "string — actual code, properly formatted, ideally under 25 lines",
+      "code": "string — actual starter code",
       "explanation": "string — brief explanation in 2-4 sentences",
       "tags": ["string", ...],
-      "difficulty": "junior" | "mid" | "senior"
+      "difficulty": "junior" | "mid" | "senior",
+      "solution": "string — full solved code (admin-only)",
+      "solutionExplanation": "string — explanation of solution (admin-only)"
     }
   ]
 }
@@ -100,7 +105,16 @@ ${params.jobDescription}
 
 TARGET LEVEL: ${params.difficulty || params.targetLevel || "Not specified"}
 
-Generate ${params.count ?? 10} questions and ${params.challengeCount ?? 10} code snippets that can be used as coding challenges. For each question include a concise answer, a short explanation or analogous example, and tags. Tailor everything to the candidate's background, job description, and extra checks. For the snippets, provide starter code and a brief explanation. Ensure diversity across difficulty levels when applicable.`,
+Generate ${params.count ?? 10} questions and ${params.challengeCount ?? 10} code snippets that can be used as coding challenges. For each QUESTION include:
+- a concise answer that would be shown to the candidate (2-4 sentences),
+- an expanded topicExplanation (simple, plain-language explanation),
+- highlights as a short bullet list of key points,
+- an analogy sentence that relates the concept to a simple real-world example,
+- optional codeExamples with language and code.
+
+For each SNIPPET include starter code, a short explanation, and additionally return the full solution and solutionExplanation — these solution fields are admin-only and must NOT be shown to candidates. Respect the generateType parameter if provided: questions, challenges, or both. If challengeGuideline is provided, use it to shape the generated code challenge idea.
+
+Tailor everything to the candidate's background, job description, extra checks, and trickiness. Ensure diversity across difficulty levels when applicable.`,
   };
 }
 

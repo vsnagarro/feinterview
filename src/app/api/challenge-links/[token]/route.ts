@@ -67,18 +67,34 @@ export async function GET(_: Request, { params }: { params: Promise<{ token: str
 
   const sessionData = linkedSession.data;
 
+  // Hide admin-only solution fields from candidate view
+  const publicChallenge = challenge
+    ? {
+        id: challenge.id,
+        title: challenge.title,
+        problem_statement: challenge.problem_statement,
+        use_case: challenge.use_case,
+        requirements: challenge.requirements ?? [],
+        workspace_template: challenge.workspace_template ?? "vanilla",
+        sandbox_dependencies: challenge.sandbox_dependencies ?? {},
+        starter_code: challenge.starter_code,
+        supported_languages: challenge.supported_languages ?? ["javascript"],
+        time_limit_minutes: challenge.time_limit_minutes,
+      }
+    : null;
+
   return NextResponse.json({
     session: {
       id: sessionData?.id,
-      title: challenge?.title,
-      problemStatement: challenge?.problem_statement,
-      useCase: challenge?.use_case,
-      requirements: challenge?.requirements ?? [],
-      workspaceTemplate: challenge?.workspace_template ?? "vanilla",
-      sandboxDependencies: challenge?.sandbox_dependencies ?? {},
-      starterCode: challenge?.starter_code,
-      languages: challenge?.supported_languages ?? ["javascript"],
-      timeLimitMinutes: challenge?.time_limit_minutes,
+      title: publicChallenge?.title,
+      problemStatement: publicChallenge?.problem_statement,
+      useCase: publicChallenge?.use_case,
+      requirements: publicChallenge?.requirements ?? [],
+      workspaceTemplate: publicChallenge?.workspace_template ?? "vanilla",
+      sandboxDependencies: publicChallenge?.sandbox_dependencies ?? {},
+      starterCode: publicChallenge?.starter_code,
+      languages: publicChallenge?.supported_languages ?? ["javascript"],
+      timeLimitMinutes: publicChallenge?.time_limit_minutes,
     },
     candidate: sessionData?.candidates ?? { id: "", name: link.candidate_name ?? "Candidate" },
     jobDescription: sessionData?.job_descriptions ?? {

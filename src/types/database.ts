@@ -96,6 +96,9 @@ export interface CodeChallenge {
   supported_languages?: string[];
   time_limit_minutes?: number;
   snippet_id?: string;
+  solution?: string | null;
+  solution_explanation?: string | null;
+  admin_only?: boolean | null;
   created_at: string;
 }
 

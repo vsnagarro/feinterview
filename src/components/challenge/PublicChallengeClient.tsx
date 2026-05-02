@@ -497,6 +497,30 @@ export function PublicChallengeClient({ token }: { token: string }) {
               value={activeFile.code}
               onChange={handleCodeChange}
               theme="vs-dark"
+              beforeMount={(monaco) => {
+                try {
+                  // Reduce false-positive squiggles from the TS worker in the embedded editor
+                  // Disable semantic validation to avoid noisy red underlines for incomplete projects
+                  // and avoid frequent cursor jumps due to programmatic value resets
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore
+                  if (monaco?.languages?.typescript?.typescriptDefaults) {
+                    // Disable semantic validation but keep syntax validation
+                    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                      noSemanticValidation: true,
+                      noSyntaxValidation: false,
+                    });
+                    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({ allowNonTsExtensions: true });
+                  }
+                } catch (e) {
+                  // ignore
+                }
+              }}
+              onMount={(editor) => {
+                // Keep reference to editor to avoid resetting value which can move cursor
+                // Ensure the editor doesn't re-render the value unless the file actually changes
+                editor.updateOptions({ automaticLayout: true, smoothScrolling: true, cursorBlinking: "blink" });
+              }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,
@@ -505,6 +529,9 @@ export function PublicChallengeClient({ token }: { token: string }) {
                 wordWrap: "on",
                 tabSize: 2,
                 padding: { top: 12, bottom: 12 },
+                automaticLayout: true,
+                smoothScrolling: true,
+                renderValidationDecorations: "on",
               }}
             />
           </div>

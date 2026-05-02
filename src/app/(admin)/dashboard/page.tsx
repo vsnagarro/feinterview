@@ -19,13 +19,41 @@ interface CandidateRow {
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ count: questionCount }, { count: snippetCount }, { count: sessionCount }, { data: recentSessions }, { data: allCandidates }] = await Promise.all([
-    supabase.from("questions").select("*", { count: "exact", head: true }),
-    supabase.from("code_snippets").select("*", { count: "exact", head: true }),
-    supabase.from("sessions").select("*", { count: "exact", head: true }),
-    supabase.from("sessions").select("id, created_at, status, candidate_id, languages").order("created_at", { ascending: false }).limit(5),
-    supabase.from("candidates").select("id, name"),
-  ]);
+  let questionCount = 0;
+  let snippetCount = 0;
+  let sessionCount = 0;
+  let recentSessions: SessionRow[] | null = null;
+  let allCandidates: CandidateRow[] | null = null;
+
+  try {
+    type CountResult = { count?: number };
+    type DataResult<T> = { data?: T[] };
+
+    const [qRes, snRes, seRes, recentRes, candidatesRes] = (await Promise.all([
+      supabase.from("questions").select("*", { count: "exact", head: true }),
+      supabase.from("code_snippets").select("*", { count: "exact", head: true }),
+      supabase.from("sessions").select("*", { count: "exact", head: true }),
+      supabase.from("sessions").select("id, created_at, status, candidate_id, languages").order("created_at", { ascending: false }).limit(5),
+      supabase.from("candidates").select("id, name"),
+    ])) as [CountResult, CountResult, CountResult, DataResult<SessionRow>, DataResult<CandidateRow>];
+
+    questionCount = qRes.count ?? 0;
+    snippetCount = snRes.count ?? 0;
+    sessionCount = seRes.count ?? 0;
+    recentSessions = recentRes.data ?? null;
+    allCandidates = candidatesRes.data ?? null;
+  } catch (err) {
+    console.error("Dashboard data load error:", err);
+    // Render dashboard with empty/placeholder values and show a server-side error message
+    return (
+      <div className="p-8 max-w-5xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded p-6">
+          <h2 className="text-xl font-semibold text-red-700">Error loading dashboard</h2>
+          <p className="text-sm text-red-600 mt-2">There was an error loading dashboard data. Check server logs for details.</p>
+        </div>
+      </div>
+    );
+  }
 
   const candidateMap = new Map<string, string>((allCandidates as CandidateRow[] | null)?.map((c) => [c.id, c.name]) ?? []);
 

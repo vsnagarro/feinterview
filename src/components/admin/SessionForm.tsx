@@ -32,6 +32,11 @@ export function SessionForm() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("mid");
   const [questionCount, setQuestionCount] = useState("10");
+  const [generateType, setGenerateType] = useState<"both" | "questions" | "challenges">("both");
+  const [challengeGuideline, setChallengeGuideline] = useState<string>("");
+  const [extraChecks, setExtraChecks] = useState<string>("");
+  const [targetLevel, setTargetLevel] = useState<string>("mid");
+  const [trickiness, setTrickiness] = useState<number | "">(3);
   const challengeCount = 10;
   const [result, setResult] = useState<{
     questions: GeneratedQuestion[];
@@ -46,7 +51,7 @@ export function SessionForm() {
     setProgressMessage("Preparing AI generation...");
 
     try {
-      // Create session
+      // Create session (we create session first, then upload resume to associate with candidate)
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,12 +66,26 @@ export function SessionForm() {
           candidateNotes: candidate.notes || undefined,
           jdTitle: jd.title || undefined,
           jdDescription: jd.description || undefined,
+          // resumeUrl handled after session creation to avoid storage race conditions
+          extraChecks: extraChecks || undefined,
+          targetLevel: targetLevel || undefined,
+          trickiness: trickiness !== "" ? Number(trickiness) : undefined,
           difficulty,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to create session");
       const { session } = await res.json();
+
+      // If we have a resume file, upload it now and attach to the created candidate
+      try {
+        if (resumeFile && session?.candidate_id) {
+          await uploadResume(session.candidate_id);
+        }
+      } catch (uploadErr) {
+        // Log but don't fail the whole flow — user can re-upload later from candidate UI
+        console.error("Resume upload after session creation failed:", uploadErr);
+      }
 
       // Generate questions via SSE
       const genRes = await fetch("/api/ai/generate-questions", {
@@ -84,26 +103,12 @@ export function SessionForm() {
           difficulty,
           count: Number(questionCount),
           challengeCount,
+          generateType: generateType,
+          challengeGuideline: challengeGuideline || undefined,
         }),
       });
 
       if (!genRes.ok) {
-  async function uploadResume(candidateId?: string) {
-    if (!resumeFile) return null;
-    const fd = new FormData();
-    fd.append("file", resumeFile);
-    if (candidateId) fd.append("candidateId", candidateId);
-    const res = await fetch("/api/candidates/upload-resume", {
-      method: "POST",
-      body: fd,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Upload failed" }));
-      throw new Error(err?.error || "Upload failed");
-    }
-    const data = await res.json();
-    return data.url ?? null;
-  }
         const errorText = await genRes.text();
         throw new Error(errorText || "Failed to generate interview content");
       }
@@ -165,6 +170,44 @@ export function SessionForm() {
     }
   }
 
+  async function uploadResume(candidateId?: string) {
+    if (!resumeFile) return null;
+    // Secure signed upload flow:
+    // 1. Request a signed PUT URL from the server
+    const signRes = await fetch("/api/candidates/upload-resume/signed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: resumeFile.name, contentType: resumeFile.type }),
+    });
+    if (!signRes.ok) {
+      const err = await signRes.text().catch(() => "Failed to get signed url");
+      throw new Error(typeof err === "string" ? err : "Failed to get signed url");
+    }
+    const { uploadUrl, publicUrl, filename } = await signRes.json();
+
+    // 2. PUT the file directly to the signed URL
+    const putRes = await fetch(uploadUrl, {
+      method: "PUT",
+      body: resumeFile,
+      headers: { "Content-Type": resumeFile.type || "application/octet-stream" },
+    });
+    if (!putRes.ok) {
+      const text = await putRes.text().catch(() => "");
+      throw new Error(`Upload failed: ${text}`);
+    }
+
+    // 3. Notify server to attach the uploaded filename to the candidate record
+    if (candidateId && filename) {
+      await fetch("/api/candidates/register-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId, filename }),
+      });
+    }
+
+    return publicUrl ?? filename ?? null;
+  }
+
   if (step === "generating") {
     return (
       <div className="card p-12 text-center space-y-4">
@@ -208,6 +251,10 @@ export function SessionForm() {
             <Input label="Years of experience" type="number" value={candidate.yearsExp} onChange={(e) => setCandidate({ ...candidate, yearsExp: e.target.value })} placeholder="3" min="0" />
           </div>
           <Textarea label="Notes" value={candidate.notes} onChange={(e) => setCandidate({ ...candidate, notes: e.target.value })} rows={2} placeholder="Any notes about the candidate…" />
+          <div>
+            <label className="text-sm font-medium block mb-1">Upload resume (optional)</label>
+            <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)} className="text-sm" />
+          </div>
           <div className="flex justify-end">
             <Button onClick={() => setStep("jd")} disabled={!candidate.name.trim()}>
               Next: Job Description →
@@ -287,6 +334,49 @@ export function SessionForm() {
                 { value: "30", label: "30 questions" },
               ]}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <div>
+              <label className="text-sm font-medium block mb-1">Generate</label>
+              <Select
+                value={generateType}
+                onChange={(e) => setGenerateType(e.target.value as "both" | "questions" | "challenges")}
+                options={[
+                  { value: "both", label: "Questions + Challenges" },
+                  { value: "questions", label: "Questions only" },
+                  { value: "challenges", label: "Code challenges only" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Challenge guideline (optional)</label>
+              <Input value={challengeGuideline} onChange={(e) => setChallengeGuideline(e.target.value)} placeholder="E.g. focus on algorithms, or performance optimizations" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="text-sm font-medium block mb-1">Target level</label>
+              <Select
+                value={targetLevel}
+                onChange={(e) => setTargetLevel(e.target.value)}
+                options={[
+                  { value: "junior", label: "Junior" },
+                  { value: "mid", label: "Mid-level" },
+                  { value: "senior", label: "Senior" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Trickiness (1-5)</label>
+              <Input type="number" min={1} max={5} value={String(trickiness)} onChange={(e) => setTrickiness(e.target.value === "" ? "" : Number(e.target.value))} />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="text-sm font-medium block mb-1">Extra checks (one per line)</label>
+            <Textarea value={extraChecks} onChange={(e) => setExtraChecks(e.target.value)} rows={3} placeholder="Performance\nAccessibility" />
           </div>
 
           <div className="text-sm text-slate-500 bg-sky-50 border border-sky-200 rounded-lg p-3">

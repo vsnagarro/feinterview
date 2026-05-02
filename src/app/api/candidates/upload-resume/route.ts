@@ -13,18 +13,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    console.error("upload-resume: form keys:", Array.from(formData.keys()));
+    if (file) {
+      try {
+        console.error("upload-resume: file meta ->", { name: (file as File).name, type: (file as File).type });
+      } catch (e) {
+        console.error("upload-resume: file meta read failed", e);
+      }
+    }
+
     const buffer = await file.arrayBuffer();
-    const filename = `${randomBytes(8).toString("hex")}-${(file as any).name ?? "resume.pdf"}`;
+    const filename = `${randomBytes(8).toString("hex")}-${(file as File).name ?? "resume.pdf"}`;
     const bucket = "resumes";
 
     // Upload to storage
-    const { error: uploadErr } = await supabase.storage.from(bucket).upload(filename, Buffer.from(buffer), {
+    const uploadRes = await supabase.storage.from(bucket).upload(filename, Buffer.from(buffer), {
       contentType: file.type || "application/pdf",
       upsert: false,
     });
+    console.error("upload-resume: uploadRes ->", uploadRes);
 
-    if (uploadErr) {
-      return NextResponse.json({ error: uploadErr.message }, { status: 500 });
+    if (uploadRes.error) {
+      console.error("upload-resume: upload error", uploadRes.error);
+      return NextResponse.json({ error: uploadRes.error.message }, { status: 500 });
     }
 
     // Get public URL (ensure bucket is configured to public, or generate signed URL instead)
@@ -39,6 +50,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, url: publicUrl }, { status: 201 });
   } catch (err) {
+    console.error("upload-resume error:", err);
     return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 500 });
   }
 }

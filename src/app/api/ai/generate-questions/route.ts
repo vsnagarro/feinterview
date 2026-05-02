@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   // Service client for all DB writes (bypasses RLS, no JWT needed for inserts)
   const supabase = await createServiceClient();
 
-  const body: GenerateQuestionsPayload = await request.json();
+  const body: GenerateQuestionsPayload & { generateType?: "questions" | "challenges" | "both"; challengeGuideline?: string } = await request.json();
   const { systemPrompt: _systemPrompt, userMessage: _userMessage } = buildGeneratePrompt(body);
 
   const ai = getAIClient();
@@ -78,8 +78,10 @@ export async function POST(request: Request) {
       const enc = new TextEncoder();
 
       try {
-        const requestedQuestionCount = Math.max(1, body.count ?? 10);
-        const requestedChallengeCount = Math.max(0, body.challengeCount ?? 10);
+        // Respect generateType override
+        const genType = body.generateType ?? "both";
+        const requestedQuestionCount = genType === "challenges" ? 0 : Math.max(1, body.count ?? 10);
+        const requestedChallengeCount = genType === "questions" ? 0 : Math.max(0, body.challengeCount ?? 10);
         const questionBatchSize = 3;
         const challengeBatchSize = 1;
         const batchCount = Math.max(Math.ceil(requestedQuestionCount / questionBatchSize), requestedChallengeCount > 0 ? Math.ceil(requestedChallengeCount / challengeBatchSize) : 1);
@@ -169,6 +171,13 @@ export async function POST(request: Request) {
           question_id: null as string | null,
           question: q.question,
           answer: q.answer,
+          explanation: q.explanation ?? null,
+          metadata: {
+            topicExplanation: q.topicExplanation ?? null,
+            highlights: q.highlights ?? null,
+            analogy: q.analogy ?? null,
+            codeExamples: q.codeExamples ?? null,
+          },
           order_index: i,
         }));
 
@@ -193,9 +202,13 @@ export async function POST(request: Request) {
             session_id: body.sessionId,
             title: `[${difficulty.toUpperCase()}] ${snippet.title?.trim() || `Generated challenge ${index + 1}`}`,
             problem_statement: [snippet.description, snippet.explanation].filter(Boolean).join("\n\n") || "Complete the coding task using the starter code.",
+            use_case: body.challengeGuideline ?? null,
             starter_code: snippet.code ?? "",
             supported_languages: [snippet.language ?? "javascript"],
             time_limit_minutes: difficulty === "senior" ? 60 : difficulty === "mid" ? 45 : 30,
+            solution: snippet.solution ?? null,
+            solution_explanation: snippet.solutionExplanation ?? null,
+            admin_only: true,
           };
         });
 

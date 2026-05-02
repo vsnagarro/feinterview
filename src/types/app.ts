@@ -33,20 +33,29 @@ export const WORKSPACE_TEMPLATE_LABELS: Record<WorkspaceTemplate, string> = {
 
 export interface GeneratedQuestion {
   question: string;
-  answer: string;
+  answer: string; // concise answer for candidate view
+  explanation?: string; // short explanation
+  topic?: string;
   tags: string[];
   difficulty: Difficulty;
-  topic: string;
+  // Rich answer components for admin visibility
+  topicExplanation?: string; // simple explanation of the topic
+  highlights?: string[]; // bullet points
+  analogy?: string; // analogous example
+  codeExamples?: { language: string; code: string }[];
 }
 
 export interface GeneratedSnippet {
   title: string;
-  description: string;
+  description?: string;
   language: string;
   code: string;
-  explanation: string;
+  explanation?: string;
   tags: string[];
   difficulty: Difficulty;
+  // Admin-only solution content
+  solution?: string;
+  solutionExplanation?: string;
 }
 
 export interface GenerateQuestionsPayload {
@@ -58,6 +67,10 @@ export interface GenerateQuestionsPayload {
   difficulty: Difficulty;
   count?: number;
   challengeCount?: number;
+  extraChecks?: string;
+  targetLevel?: string;
+  trickiness?: number | null;
+  resumeUrl?: string;
 }
 
 export interface AnalyzeCodePayload {

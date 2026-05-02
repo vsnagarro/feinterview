@@ -8,7 +8,18 @@ import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
+
+  // Lazily initialize the browser-only client to avoid server-side evaluation during prerender
+  useState(() => {
+    try {
+      const c = createClient();
+      setSupabase(c);
+    } catch (e) {
+      // ignore initialization errors during prerender
+      console.warn("Supabase client init skipped server-side:", e);
+    }
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,6 +29,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    if (!supabase) {
+      setError("Auth client not initialized");
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
