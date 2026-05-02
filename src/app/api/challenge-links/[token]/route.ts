@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, createClient } from "@/lib/supabase/server";
+
+function isUUID(value: string) {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
 
 export async function GET(_: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const supabase = await createServiceClient();
 
+  // First, check if token matches a session.challenge_token (public session links)
   const { data: session } = await supabase
     .from("sessions")
     .select("*, candidates(id, name, email, experience_level), job_descriptions(id, title, description, required_skills, tech_stack)")
@@ -30,6 +35,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ token: str
     });
   }
 
+  // Otherwise treat as a challenge_link token
   const { data: link, error } = await supabase.from("challenge_links").select("*").eq("token", token).single();
 
   if (error || !link) {
@@ -89,4 +95,64 @@ export async function GET(_: Request, { params }: { params: Promise<{ token: str
     liveCodeState,
     linkType: "challenge_link",
   });
+}
+
+// Admin actions: expire/reactivate/update expiresAt or soft-delete (deactivate) a link.
+export async function PATCH(request: Request, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json().catch(() => ({}));
+  const { action } = body as { action?: string };
+  const whereField = isUUID(token) ? "id" : "token";
+
+  try {
+    if (action === "expire") {
+      const { data, error } = await supabase.from("challenge_links").update({ is_active: false, expires_at: new Date().toISOString() }).eq(whereField, token).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(data);
+    }
+
+    if (action === "reactivate") {
+      const { data, error } = await supabase.from("challenge_links").update({ is_active: true }).eq(whereField, token).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(data);
+    }
+
+    if (action === "updateExpiresAt") {
+      const { expiresAt } = body as { expiresAt?: string };
+      if (!expiresAt) return NextResponse.json({ error: "expiresAt required" }, { status: 400 });
+      const { data, error } = await supabase.from("challenge_links").update({ expires_at: expiresAt }).eq(whereField, token).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(data);
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
+}
+
+export async function DELETE(_: Request, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const whereField = isUUID(token) ? "id" : "token";
+
+  try {
+    // Soft-delete: mark inactive for audit/history
+    const { data, error } = await supabase.from("challenge_links").update({ is_active: false }).eq(whereField, token).select().single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, link: data });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
 }

@@ -258,6 +258,38 @@ export function ChallengeLinkGenerator({ sessionId, existingChallenge }: Challen
     }
   }
 
+  // Expire a link immediately (soft-deactivate)
+  async function handleExpireLink(linkId: string) {
+    if (!confirm("Expire this link now? Candidates will no longer be able to open it.")) return;
+    try {
+      const res = await fetch(`/api/challenge-links/${linkId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "expire" }),
+      });
+      if (!res.ok) throw new Error("Failed to expire link");
+      const updated = await res.json();
+      setLinks((prev) => prev.map((l) => (l.id === linkId ? { ...l, is_active: false, expires_at: updated.expires_at ?? l.expires_at } : l)));
+      toast("Link expired", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Error", "error");
+    }
+  }
+
+  // Delete/deactivate a link (soft-delete)
+  async function handleDeleteLink(linkId: string) {
+    if (!confirm("Delete this link? This will deactivate the link for candidates.")) return;
+    try {
+      const res = await fetch(`/api/challenge-links/${linkId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete link");
+      // soft-delete: mark inactive in UI
+      setLinks((prev) => prev.map((l) => (l.id === linkId ? { ...l, is_active: false } : l)));
+      toast("Link deactivated", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Error", "error");
+    }
+  }
+
   function copyLink(url: string, id: string) {
     navigator.clipboard.writeText(url);
     setCopiedId(id);
@@ -435,6 +467,14 @@ export function ChallengeLinkGenerator({ sessionId, existingChallenge }: Challen
                   <div className="flex gap-2 shrink-0">
                     <Button size="sm" variant="secondary" onClick={() => copyLink(url, link.id)}>
                       {copiedId === link.id ? "Copied!" : "Copy"}
+                    </Button>
+                    {!expired && link.is_active && (
+                      <Button size="sm" variant="secondary" onClick={() => handleExpireLink(link.id)}>
+                        Expire
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => handleDeleteLink(link.id)}>
+                      Delete
                     </Button>
                     {!expired && (
                       <Link href={`/sessions/${sessionId}/challenge/${link.id}`}>
