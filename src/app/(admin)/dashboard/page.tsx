@@ -91,7 +91,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-5 gap-4 mb-8">
         {[
           { label: "Candidates", count: candidateCount, href: "/candidates" },
-          { label: "Sessions", count: sessionCount, href: "/sessions" },
+          { label: "Interview Sessions", count: sessionCount, href: "/sessions" },
           { label: "Job Profiles", count: profileCount, href: "/profiles" },
           { label: "Questions", count: questionCount, href: "/library" },
           { label: "Code Snippets", count: snippetCount, href: "/library?tab=snippets" },
@@ -183,7 +183,21 @@ export default async function DashboardPage() {
                       <td className="p-3 text-slate-600">{session.job_descriptions?.title ?? "—"}</td>
                       <td className="p-3 text-slate-500 whitespace-nowrap">{formatDateShort(session.created_at)}</td>
                       <td className="p-3">
-                        <Badge variant={session.status === "active" ? "success" : session.status === "completed" ? "info" : "default"}>{session.status}</Badge>
+                        <Badge
+                          variant={
+                            session.status === "selected" || session.status === "active"
+                              ? "success"
+                              : session.status === "completed" || session.status === "submitted"
+                                ? "info"
+                                : session.status === "draft" || session.status === "pending"
+                                  ? "warning"
+                                  : session.status === "failed"
+                                    ? "danger"
+                                    : "default"
+                          }
+                        >
+                          {session.status}
+                        </Badge>
                       </td>
                       <td className="p-3 text-center">{challengeCount > 0 ? <span className="font-medium">{challengeCount}</span> : <span className="text-slate-300">—</span>}</td>
                       <td className="p-3 text-center">

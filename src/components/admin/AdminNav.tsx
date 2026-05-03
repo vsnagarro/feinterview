@@ -12,7 +12,7 @@ const navItems = [
   { href: "/candidates", label: "Candidates", icon: "👤" },
   { href: "/profiles", label: "Job Profiles", icon: "📋" },
   { href: "/library", label: "Library", icon: "📚" },
-  { href: "/sessions", label: "Sessions", icon: "🎯" },
+  { href: "/sessions", label: "Interview Sessions", icon: "🎯" },
 ];
 
 export default function AdminNav({ userEmail }: { userEmail: string }) {

@@ -60,13 +60,15 @@ async function compressImage(file: File, quality = 0.82): Promise<File> {
 interface SessionFeedbackProps {
   sessionId: string;
   initialFeedback: string | null;
+  initialRecommendations: string | null;
   screenshotPath: string | null;
   screenshotSignedUrl: string | null;
 }
 
-export function SessionFeedback({ sessionId, initialFeedback, screenshotPath, screenshotSignedUrl }: SessionFeedbackProps) {
+export function SessionFeedback({ sessionId, initialFeedback, initialRecommendations, screenshotPath, screenshotSignedUrl }: SessionFeedbackProps) {
   const router = useRouter();
   const [feedback, setFeedback] = useState(initialFeedback ?? "");
+  const [recommendations, setRecommendations] = useState(initialRecommendations ?? "");
   const [savingFeedback, setSavingFeedback] = useState(false);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [deletingScreenshot, setDeletingScreenshot] = useState(false);
@@ -80,7 +82,7 @@ export function SessionFeedback({ sessionId, initialFeedback, screenshotPath, sc
       const res = await fetch(`/api/sessions/${sessionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: feedback || null }),
+        body: JSON.stringify({ feedback: feedback || null, recommendations: recommendations || null }),
       });
       if (!res.ok) throw new Error("Failed to save");
       toast("Feedback saved", "success");
@@ -154,10 +156,22 @@ export function SessionFeedback({ sessionId, initialFeedback, screenshotPath, sc
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-2">Interviewer Feedback</h3>
         <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={5} placeholder="Add your notes and feedback about the candidate's performance…" />
-        <Button size="sm" className="mt-2" loading={savingFeedback} onClick={handleSaveFeedback}>
-          Save Feedback
-        </Button>
       </div>
+
+      {/* Recommendations */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-700 mb-2">Recommendations</h3>
+        <Textarea
+          value={recommendations}
+          onChange={(e) => setRecommendations(e.target.value)}
+          rows={4}
+          placeholder="Add hiring recommendations, suggested next steps, areas to improve, or reasons for the decision…"
+        />
+      </div>
+
+      <Button size="sm" loading={savingFeedback} onClick={handleSaveFeedback}>
+        Save Feedback &amp; Recommendations
+      </Button>
 
       {/* Screenshot */}
       <div>

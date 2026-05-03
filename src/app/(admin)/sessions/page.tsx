@@ -40,11 +40,11 @@ export default async function SessionsPage() {
     <div className="p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Sessions</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Interview Sessions</h1>
           <p className="text-slate-500 text-sm mt-1">{sessions?.length ?? 0} interview sessions</p>
         </div>
         <Link href="/sessions/new">
-          <Button>New Session</Button>
+          <Button>New Interview Session</Button>
         </Link>
       </div>
 
@@ -67,7 +67,21 @@ export default async function SessionsPage() {
                     {qCount}Q / {cCount}C
                   </span>
                   {session.languages[0] && <Badge variant="default">{session.languages[0]}</Badge>}
-                  <Badge variant={session.status === "draft" ? "warning" : session.status === "active" ? "success" : session.status === "completed" ? "info" : "default"}>{session.status}</Badge>
+                  <Badge
+                    variant={
+                      session.status === "selected" || session.status === "active"
+                        ? "success"
+                        : session.status === "completed" || session.status === "submitted"
+                          ? "info"
+                          : session.status === "draft" || session.status === "pending"
+                            ? "warning"
+                            : session.status === "failed"
+                              ? "danger"
+                              : "default"
+                    }
+                  >
+                    {session.status}
+                  </Badge>
                   {session.status === "draft" && (
                     <Link href={`/sessions/new?draftId=${session.id}`}>
                       <Button size="sm" variant="secondary">

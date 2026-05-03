@@ -16,6 +16,7 @@ interface SessionRecord {
   job_description_id: string | null;
   languages: string[];
   feedback: string | null;
+  recommendations: string | null;
   screenshot_url: string | null;
 }
 interface Candidate {
@@ -133,7 +134,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link href="/sessions" className="text-sm text-slate-500 hover:text-sky-600">
-              ← Sessions
+              ← Interview Sessions
             </Link>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{typedCandidate?.name ?? "Session"}</h1>
@@ -331,7 +332,13 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
       {/* Feedback & Screenshot */}
       <div className="card p-5">
         <h2 className="font-semibold text-slate-900 mb-4">Feedback &amp; Notes</h2>
-        <SessionFeedback sessionId={id} initialFeedback={typedSession.feedback} screenshotPath={typedSession.screenshot_url} screenshotSignedUrl={screenshotSignedUrl} />
+        <SessionFeedback
+          sessionId={id}
+          initialFeedback={typedSession.feedback}
+          initialRecommendations={typedSession.recommendations ?? null}
+          screenshotPath={typedSession.screenshot_url}
+          screenshotSignedUrl={screenshotSignedUrl}
+        />
       </div>
     </div>
   );

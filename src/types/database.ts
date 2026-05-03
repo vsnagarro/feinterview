@@ -40,7 +40,7 @@ export interface Session {
   candidate_id: string;
   job_description_id: string;
   interviewer_id: string;
-  status: "draft" | "pending" | "active" | "submitted" | "completed" | "expired";
+  status: "draft" | "pending" | "active" | "submitted" | "completed" | "expired" | "selected" | "failed";
   languages: string[];
   created_at: string;
   expires_at: string;
@@ -51,6 +51,7 @@ export interface Session {
   feedback?: string | null;
   screenshot_url?: string | null;
   profile_id?: string | null;
+  recommendations?: string | null;
 }
 
 export interface CodeSubmission {
