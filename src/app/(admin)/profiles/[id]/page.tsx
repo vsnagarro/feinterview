@@ -84,6 +84,7 @@ export default async function ProfileDetailPage({ params, searchParams }: Props)
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           {[
             { label: "Level", value: profile.level },
+            { label: "Experience range", value: profile.experience_range ?? "—" },
             { label: "Difficulty", value: profile.difficulty },
             { label: "Questions", value: String(profile.question_count) },
             { label: "Code challenges", value: String(profile.challenge_count) },

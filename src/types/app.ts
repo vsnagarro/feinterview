@@ -20,6 +20,7 @@ export interface InterviewProfile {
   challenge_guideline: string | null;
   extra_checks: string | null;
   notes: string | null;
+  experience_range: string | null;
 }
 
 export const SUPPORTED_LANGUAGES = ["javascript", "typescript", "python", "css", "html", "java", "go", "rust", "sql"] as const;

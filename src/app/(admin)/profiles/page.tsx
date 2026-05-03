@@ -51,6 +51,7 @@ export default async function ProfilesPage() {
                   <span>
                     {p.challenge_count} challenge{p.challenge_count !== 1 ? "s" : ""}
                   </span>
+                  {p.experience_range && <span>{p.experience_range}</span>}
                   <span>Trickiness {p.trickiness}/5</span>
                   <span>Created {formatDateShort(p.created_at)}</span>
                 </div>

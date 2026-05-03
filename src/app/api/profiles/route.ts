@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     challenge_guideline,
     extra_checks,
     notes,
+    experience_range,
   } = body;
 
   if (!title?.trim()) return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       challenge_guideline: challenge_guideline || null,
       extra_checks: extra_checks || null,
       notes: notes || null,
+      experience_range: experience_range || null,
     })
     .select()
     .single();

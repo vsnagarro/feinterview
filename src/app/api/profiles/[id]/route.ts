@@ -24,7 +24,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
-  const { title, position, level, jd_text, question_count, challenge_count, trickiness, difficulty, generate_type, challenge_guideline, extra_checks, notes } = body;
+  const { title, position, level, jd_text, question_count, challenge_count, trickiness, difficulty, generate_type, challenge_guideline, extra_checks, notes, experience_range } = body;
 
   const update: Record<string, unknown> = {};
   if (title !== undefined) update.title = title.trim();
@@ -39,6 +39,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (challenge_guideline !== undefined) update.challenge_guideline = challenge_guideline || null;
   if (extra_checks !== undefined) update.extra_checks = extra_checks || null;
   if (notes !== undefined) update.notes = notes || null;
+  if (experience_range !== undefined) update.experience_range = experience_range || null;
 
   const { data, error } = await supabase.from("interview_profiles").update(update).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -31,6 +31,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const [challengeGuideline, setChallengeGuideline] = useState(profile?.challenge_guideline ?? "");
   const [extraChecks, setExtraChecks] = useState(profile?.extra_checks ?? "");
   const [notes, setNotes] = useState(profile?.notes ?? "");
+  const [experienceRange, setExperienceRange] = useState(profile?.experience_range ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,6 +54,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         challenge_guideline: challengeGuideline || null,
         extra_checks: extraChecks || null,
         notes: notes || null,
+        experience_range: experienceRange || null,
       };
 
       const res = await fetch(isEdit ? `/api/profiles/${profile.id}` : "/api/profiles", {
@@ -86,6 +88,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           <Input label="Profile name *" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Senior Frontend Engineer Profile" required />
           <Input label="Position / Role" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="Senior Frontend Engineer" />
         </div>
+        <Input label="Experience range" value={experienceRange} onChange={(e) => setExperienceRange(e.target.value)} placeholder="3–5 years" />
         <Textarea label="Job description (paste full JD for best AI questions)" value={jdText} onChange={(e) => setJdText(e.target.value)} rows={8} placeholder="Paste the job description here…" />
         <Textarea label="Notes (internal — not sent to AI)" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="E.g. used for React team hirings, focus on system design…" />
       </div>
