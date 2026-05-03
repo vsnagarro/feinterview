@@ -64,9 +64,11 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
             q.id === questionId
               ? {
                   ...q,
+                  explanation: result.results[0]?.data?.explanation,
                   simple_explanation: result.results[0]?.data?.simple_explanation,
                   examples: result.results[0]?.data?.examples,
                   code_examples: result.results[0]?.data?.code_examples,
+                  highlights: result.results[0]?.data?.highlights,
                 }
               : q,
           ),
@@ -346,46 +348,52 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   <strong>Answer:</strong> {q.answer}
                 </p>
 
+                {/* 1. Detailed Explanation */}
+                {q.explanation && (
+                  <div className="mt-4 bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-slate-600 mb-1">Detailed Explanation</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{q.explanation}</p>
+                  </div>
+                )}
+
+                {/* 2. Simple Terms & Analogy */}
                 {q.simple_explanation && (
-                  <div className="mt-4 bg-blue-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-blue-900">Simple Terms &amp; Analogy:</p>
-                    <p className="text-xs text-blue-800 mt-1">{q.simple_explanation}</p>
+                  <div className="mt-3 bg-sky-50 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-sky-700 mb-1">Simple Terms &amp; Analogy</p>
+                    <p className="text-sm text-sky-900 whitespace-pre-wrap">{q.simple_explanation}</p>
+                    {q.examples && q.examples.length > 0 && (
+                      <ul className="mt-2 space-y-1 border-t border-sky-100 pt-2">
+                        {q.examples.map((ex: string, i: number) => (
+                          <li key={i} className="text-xs text-sky-800 flex gap-1.5">
+                            <span className="text-sky-400 shrink-0">→</span>
+                            <span>{ex}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
 
-                {q.examples && q.examples.length > 0 && (
-                  <div className="mt-3 bg-green-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-green-900">Analogous Examples:</p>
-                    <ul className="text-xs text-green-800 mt-2 space-y-1">
-                      {q.examples.map((ex: string, i: number) => (
-                        <li key={i} className="list-disc list-inside">
-                          {ex}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
+                {/* 3. Code Examples */}
                 {q.code_examples && q.code_examples.length > 0 && (
-                  <div className="mt-3 bg-purple-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-purple-900">Code Examples:</p>
-                    <div className="mt-2 space-y-2">
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-slate-600 mb-2">Code Examples</p>
+                    <div className="space-y-2">
                       {q.code_examples.map((ex: { language: string; code: string }, i: number) => (
-                        <div key={i} className="bg-slate-900 p-2 rounded text-xs">
-                          <p className="text-purple-300 font-semibold mb-1">{ex.language}</p>
-                          <pre className="text-slate-300 overflow-x-auto text-[10px]">
-                            <code>{ex.code}</code>
-                          </pre>
+                        <div key={i} className="bg-slate-900 rounded-lg p-3">
+                          <p className="text-xs text-slate-400 font-mono mb-2">{ex.language}</p>
+                          <pre className="text-xs text-slate-100 overflow-x-auto"><code>{ex.code}</code></pre>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
+                {/* 4. Key Takeaways */}
                 {q.highlights && q.highlights.length > 0 && (
-                  <div className="mt-3 bg-amber-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-amber-700">Key Takeaways:</p>
-                    <ul className="mt-2 space-y-1">
+                  <div className="mt-3 bg-amber-50 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-amber-700 mb-2">Key Takeaways</p>
+                    <ul className="space-y-1">
                       {q.highlights.map((point: string, i: number) => (
                         <li key={i} className="text-xs text-amber-900 flex gap-1.5">
                           <span className="text-amber-500 shrink-0">•</span>

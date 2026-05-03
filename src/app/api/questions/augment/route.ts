@@ -13,6 +13,7 @@ interface QuestionWithAugmentation {
 }
 
 async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promise<{
+  detailed_explanation: string;
   simple_explanation: string;
   examples: string[];
   code_examples: Array<{ language: string; code: string }>;
@@ -24,11 +25,12 @@ async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promis
 
   const gemini = createGeminiAnthropicLike();
 
-  const prompt = `You are an expert technical educator. Given a technical interview question and its answer, produce four structured sections:
-1. A plain-language explanation with a concrete real-world analogy (2-3 sentences) — stored in simple_explanation
-2. 2-3 analogous real-world examples that make the concept intuitive — stored in examples
-3. 2 runnable code examples in JavaScript and TypeScript — stored in code_examples
-4. 5-7 key takeaways a strong candidate must know, each as a short bullet-point string — stored in highlights
+  const prompt = `You are an expert technical educator. Given a technical interview question and its answer, produce five structured sections:
+1. A detailed technical explanation of the concept with depth matching the question's difficulty (3-5 sentences) — stored in detailed_explanation
+2. A plain-language explanation followed by a concrete real-world analogy that makes the concept click (2-3 sentences) — stored in simple_explanation
+3. 2-3 analogous real-world examples that reinforce intuition — stored in examples
+4. 2 runnable code examples in JavaScript and TypeScript — stored in code_examples
+5. 5-7 key takeaways a strong candidate must know, each as a short actionable bullet-point string — stored in highlights
 
 Question: ${question.text}
 Current Answer: ${question.answer}
@@ -36,6 +38,7 @@ ${question.explanation ? `Current Explanation: ${question.explanation}` : ""}
 
 Respond in JSON format with these exact keys:
 {
+  "detailed_explanation": "technical depth — mechanisms, trade-offs, edge cases (3-5 sentences)",
   "simple_explanation": "plain-language explanation followed by a real-world analogy (2-3 sentences)",
   "examples": ["concrete analogous example 1", "example 2", "example 3"],
   "code_examples": [
@@ -46,14 +49,15 @@ Respond in JSON format with these exact keys:
 }
 
 Important:
-- Keep simple_explanation concise and in plain English
-- Make examples relatable, concrete, and directly analogous to the concept
-- Ensure code examples are syntactically correct, runnable, and demonstrate the concept clearly
-- Highlights should be actionable, memorable points (not just restatements of the answer)
+- detailed_explanation: go beyond the answer — include mechanisms, gotchas, and when/why it matters
+- simple_explanation: assume no prior knowledge; end with a real-world analogy
+- examples: make them relatable and directly analogous to the concept
+- code_examples: syntactically correct, runnable, demonstrate the concept clearly
+- highlights: actionable, memorable — not restatements of the answer
 - All strings must be properly escaped JSON`;
 
   const message = await gemini.messages.create({
-    max_tokens: 1024,
+    max_tokens: 2048,
     messages: [
       {
         role: "user",
@@ -121,6 +125,7 @@ export async function POST(req: NextRequest) {
         const { data: updated, error: updateError } = await supabase
           .from("questions")
           .update({
+            explanation: augmented.detailed_explanation,
             simple_explanation: augmented.simple_explanation,
             examples: augmented.examples,
             code_examples: augmented.code_examples,
