@@ -680,20 +680,23 @@ export function PublicChallengeClient({ token }: { token: string }) {
         {/* Right Panel */}
         <div className="flex flex-col border-l border-white/10 bg-slate-900/50 overflow-hidden" style={{ width: `${rightPanelWidth}px` }} ref={rightPanelRef} data-right-panel>
           {SANDPACK_LANGS.has(runtimeLanguage) ? (
-            <>
-              {/* Sandpack Preview + Console for browser languages */}
-              <div className="flex flex-col min-h-0 overflow-hidden w-full" style={{ flex: `${rightPanelSplitRatio}` }}>
-                <SandpackProvider
-                  key={`runtime-${runtimeVersion}-${sandpackFilesKey}`}
-                  template={sandpackRuntime.template}
-                  files={sandpackRuntime.files}
-                  customSetup={sandpackRuntime.customSetup}
-                  options={{
-                    activeFile: sandpackRuntime.activeFile,
-                    visibleFiles: sandpackRuntime.visibleFiles,
-                    externalResources: sandpackRuntime.externalResources,
-                  }}
-                >
+            // Single SandpackProvider so Preview and Console share the same sandbox.
+            // Two separate providers = two isolated iframes; console.log in preview
+            // would never appear in the console panel of a different provider.
+            <SandpackProvider
+              key={`runtime-${runtimeVersion}-${sandpackFilesKey}`}
+              template={sandpackRuntime.template}
+              files={sandpackRuntime.files}
+              customSetup={sandpackRuntime.customSetup}
+              options={{
+                activeFile: sandpackRuntime.activeFile,
+                visibleFiles: sandpackRuntime.visibleFiles,
+                externalResources: sandpackRuntime.externalResources,
+              }}
+            >
+              <div className="flex flex-col h-full min-h-0">
+                {/* Preview */}
+                <div className="flex flex-col min-h-0 overflow-hidden w-full" style={{ flex: `${rightPanelSplitRatio}` }}>
                   <SandpackLayout className="!h-full !w-full !rounded-none !border-0 !bg-transparent">
                     <div className="flex flex-col w-full h-full bg-white">
                       <div className="flex-shrink-0 border-b border-slate-200 px-3 py-2">
@@ -704,23 +707,12 @@ export function PublicChallengeClient({ token }: { token: string }) {
                       </div>
                     </div>
                   </SandpackLayout>
-                </SandpackProvider>
-              </div>
+                </div>
 
-              <ResizablePanelSeparator onDragStart={handleRightPanelSplitResize} direction="horizontal" />
+                <ResizablePanelSeparator onDragStart={handleRightPanelSplitResize} direction="horizontal" />
 
-              <div className="flex flex-col min-h-0" style={{ flex: `${1 - rightPanelSplitRatio}` }}>
-                <SandpackProvider
-                  key={`runtime-${runtimeVersion}-${sandpackFilesKey}`}
-                  template={sandpackRuntime.template}
-                  files={sandpackRuntime.files}
-                  customSetup={sandpackRuntime.customSetup}
-                  options={{
-                    activeFile: sandpackRuntime.activeFile,
-                    visibleFiles: sandpackRuntime.visibleFiles,
-                    externalResources: sandpackRuntime.externalResources,
-                  }}
-                >
+                {/* Console — same sandbox as preview, so console.log shows here */}
+                <div className="flex flex-col min-h-0" style={{ flex: `${1 - rightPanelSplitRatio}` }}>
                   <SandpackLayout className="!h-full !rounded-none !border-0 !bg-transparent">
                     <div className="flex-1 flex flex-col min-h-0 bg-slate-900/80 border-t border-white/10">
                       <div className="flex-shrink-0 border-b border-white/10 px-3 py-2">
@@ -731,9 +723,9 @@ export function PublicChallengeClient({ token }: { token: string }) {
                       </div>
                     </div>
                   </SandpackLayout>
-                </SandpackProvider>
+                </div>
               </div>
-            </>
+            </SandpackProvider>
           ) : (
             /* Server-side execution output panel */
             <div className="flex flex-col h-full bg-slate-950 font-mono">
