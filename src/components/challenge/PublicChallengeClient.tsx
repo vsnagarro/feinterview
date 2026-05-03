@@ -539,7 +539,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
               key={activeFile.path}
               height="100%"
               language={activeFile.language === "jsx" || activeFile.language === "tsx" ? "typescript" : activeFile.language}
-              value={activeFile.code}
+              defaultValue={activeFile.code}
               onChange={handleCodeChange}
               theme="vs-dark"
               beforeMount={(monaco) => {
