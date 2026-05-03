@@ -98,6 +98,31 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
     }
   }
 
+  const [gistExporting, setGistExporting] = useState<string | null>(null); // snippetId being exported
+
+  async function exportToGist(snippet: Snippet) {
+    setGistExporting(snippet.id);
+    try {
+      const res = await fetch("/api/gist/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snippetId: snippet.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error ?? "Failed to export to Gist", "error");
+        return;
+      }
+      // Open the newly created Gist in a new tab
+      window.open(data.url, "_blank", "noopener,noreferrer");
+      toast("Exported to GitHub Gist ↗", "success");
+    } catch {
+      toast("Error exporting to Gist", "error");
+    } finally {
+      setGistExporting(null);
+    }
+  }
+
   async function handleDeleteSnippet(snippetId: string) {
     if (!confirm("Are you sure you want to delete this snippet?")) return;
 
@@ -281,6 +306,17 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
                     ))}
                   </div>
                 )}
+                <div className="px-4 pb-3 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={gistExporting === s.id}
+                    onClick={() => exportToGist(s)}
+                    title="Export this snippet to a new GitHub Gist"
+                  >
+                    ↗ Export to Gist
+                  </Button>
+                </div>
               </div>
             )}
           </div>

@@ -19,8 +19,19 @@ import {
   type WorkspaceState,
 } from "@/lib/challenge/workspace";
 import { WORKSPACE_TEMPLATE_LABELS, type WorkspaceTemplate } from "@/types/app";
+import type { editor as MonacoEditorNS } from "monaco-editor";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+
+/** Languages executed in-browser by Sandpack; others go to the /api/execute server. */
+const SANDPACK_LANGS = new Set(["javascript", "typescript", "html", "css", "jsx", "tsx"]);
+
+interface ExecutionOutput {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  compile?: { stderr: string; exitCode: number } | null;
+}
 
 // ResizablePanel component for draggable separators
 function ResizablePanelSeparator({ onDragStart, direction = "vertical" }: { onDragStart: (e: React.MouseEvent) => void; direction?: "vertical" | "horizontal" }) {
@@ -85,20 +96,32 @@ export function PublicChallengeClient({ token }: { token: string }) {
   const [runtimeVersion, setRuntimeVersion] = useState(1);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [connected, setConnected] = useState(false);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(320); // Left panel width in px
-  const [rightPanelWidth, setRightPanelWidth] = useState(420); // Right panel width in px
-  const [problemStatementHeight, setProblemStatementHeight] = useState(45); // percentage
-  const [rightPanelSplitRatio, setRightPanelSplitRatio] = useState(0.5); // Preview/console split
+  const [leftPanelWidth, setLeftPanelWidth] = useState(320);
+  const [rightPanelWidth, setRightPanelWidth] = useState(420);
+  const [problemStatementHeight, setProblemStatementHeight] = useState(45);
+  const [rightPanelSplitRatio, setRightPanelSplitRatio] = useState(0.5);
   const [showNewFileInput, setShowNewFileInput] = useState(false);
   const [newFileName, setNewFileName] = useState("");
+  const [serverRunning, setServerRunning] = useState(false);
+  const [execOutput, setExecOutput] = useState<ExecutionOutput | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
 
   const { syncCode } = useCodeSync({
     linkId: challenge?.linkId,
     onConnected: () => setConnected(true),
     onCodeUpdate: (code: string, language: string) => {
+      // Apply remote code update via executeEdits to preserve cursor position
+      const ed = editorRef.current;
+      if (ed) {
+        const model = ed.getModel();
+        if (model && model.getValue() !== code) {
+          const fullRange = model.getFullModelRange();
+          ed.executeEdits("remote-sync", [{ range: fullRange, text: code, forceMoveMarkers: false }]);
+        }
+      }
       // Parse the serialized workspace and update
       try {
         const updatedWorkspace = deserializeWorkspace(code, workspace?.template || "vanilla", workspace?.files[0]?.code);
@@ -199,6 +222,35 @@ export function PublicChallengeClient({ token }: { token: string }) {
   const handleRun = useCallback(() => {
     setRuntimeVersion((current) => current + 1);
   }, []);
+
+  /** Runs the active file's code on the server for non-browser languages. */
+  const handleServerRun = useCallback(async () => {
+    if (!activeFile || serverRunning) return;
+    setServerRunning(true);
+    setExecOutput(null);
+    try {
+      const res = await fetch("/api/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: runtimeLanguage, code: activeFile.code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setExecOutput({ stdout: "", stderr: data.error ?? "Execution failed", exitCode: 1 });
+        return;
+      }
+      setExecOutput({
+        stdout: data.stdout ?? "",
+        stderr: data.stderr ?? "",
+        exitCode: data.exitCode ?? null,
+        compile: data.compile ?? null,
+      });
+    } catch {
+      setExecOutput({ stdout: "", stderr: "Could not reach execution service", exitCode: 1 });
+    } finally {
+      setServerRunning(false);
+    }
+  }, [activeFile, runtimeLanguage, serverRunning]);
 
   const handleSubmit = async () => {
     if (!workspace) return;
@@ -384,8 +436,8 @@ export function PublicChallengeClient({ token }: { token: string }) {
                 </option>
               ))}
             </select>
-            <Button variant="secondary" size="sm" onClick={handleRun}>
-              Run
+            <Button variant="secondary" size="sm" onClick={SANDPACK_LANGS.has(runtimeLanguage) ? handleRun : handleServerRun} loading={serverRunning}>
+              {SANDPACK_LANGS.has(runtimeLanguage) ? "Run" : serverRunning ? "Running…" : "▶ Run"}
             </Button>
             <Button size="sm" onClick={handleSubmit} loading={submitting}>
               {submitting ? "Submitting…" : "Submit"}
@@ -483,24 +535,91 @@ export function PublicChallengeClient({ token }: { token: string }) {
               theme="vs-dark"
               beforeMount={(monaco) => {
                 try {
-                  // Reduce false-positive squiggles from the TS worker in the embedded editor
-                  // Disable semantic validation to avoid noisy red underlines for incomplete projects
-                  // and avoid frequent cursor jumps due to programmatic value resets
-                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                  // @ts-ignore
                   if (monaco?.languages?.typescript?.typescriptDefaults) {
-                    // Disable semantic validation but keep syntax validation
                     monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
                       noSemanticValidation: true,
                       noSyntaxValidation: false,
                     });
-                    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({ allowNonTsExtensions: true });
+                    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+                      noSemanticValidation: true,
+                      noSyntaxValidation: false,
+                    });
+                    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+                      allowNonTsExtensions: true,
+                      jsx: monaco.languages.typescript.JsxEmit.React,
+                      jsxFactory: "React.createElement",
+                      target: monaco.languages.typescript.ScriptTarget.ES2020,
+                    });
+                    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+                      allowNonTsExtensions: true,
+                      checkJs: false,
+                    });
                   }
+
+                  // Register basic snippet completions for server-side languages
+                  const registerSnippets = (langId: string, items: { label: string; insertText: string; doc: string }[]) => {
+                    monaco.languages.registerCompletionItemProvider(langId, {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      provideCompletionItems: (model: any, position: any) => {
+                        const word = model.getWordUntilPosition(position);
+                        const range = {
+                          startLineNumber: position.lineNumber,
+                          endLineNumber: position.lineNumber,
+                          startColumn: word.startColumn,
+                          endColumn: word.endColumn,
+                        };
+                        return {
+                          suggestions: items.map((item) => ({
+                            label: item.label,
+                            kind: monaco.languages.CompletionItemKind.Snippet,
+                            documentation: item.doc,
+                            insertText: item.insertText,
+                            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                            range,
+                          })),
+                        };
+                      },
+                    });
+                  };
+
+                  registerSnippets("python", [
+                    { label: "def", insertText: "def ${1:function_name}(${2:params}):\n\t${3:pass}", doc: "Define a function" },
+                    { label: "class", insertText: "class ${1:ClassName}:\n\tdef __init__(self):\n\t\t${2:pass}", doc: "Define a class" },
+                    { label: "for", insertText: "for ${1:item} in ${2:iterable}:\n\t${3:pass}", doc: "For loop" },
+                    { label: "print", insertText: "print(${1:value})", doc: "Print to stdout" },
+                    { label: "list comp", insertText: "[${1:expr} for ${2:item} in ${3:iterable}]", doc: "List comprehension" },
+                  ]);
+                  registerSnippets("go", [
+                    { label: "func", insertText: "func ${1:name}(${2:params}) ${3:returnType} {\n\t${4}\n}", doc: "Define a function" },
+                    { label: "fmt.Println", insertText: 'fmt.Println(${1:"hello"})', doc: "Print line" },
+                    { label: "for", insertText: "for ${1:i} := 0; ${1:i} < ${2:n}; ${1:i}++ {\n\t${3}\n}", doc: "For loop" },
+                    { label: "if err", insertText: "if err != nil {\n\treturn ${1:err}\n}", doc: "Error check" },
+                    { label: "goroutine", insertText: "go func() {\n\t${1}\n}()", doc: "Goroutine" },
+                  ]);
+                  registerSnippets("java", [
+                    { label: "main", insertText: "public static void main(String[] args) {\n\t${1}\n}", doc: "Main method" },
+                    { label: "sout", insertText: 'System.out.println(${1:"Hello"});', doc: "Print to stdout" },
+                    { label: "class", insertText: "public class ${1:ClassName} {\n\t${2}\n}", doc: "Class definition" },
+                    { label: "for", insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t${3}\n}", doc: "For loop" },
+                  ]);
+                  registerSnippets("rust", [
+                    { label: "fn", insertText: "fn ${1:name}(${2:params}) -> ${3:()} {\n\t${4}\n}", doc: "Define a function" },
+                    { label: "println!", insertText: 'println!("${1:{}}", ${2:value});', doc: "Print macro" },
+                    { label: "match", insertText: "match ${1:value} {\n\t${2:pattern} => ${3:expr},\n\t_ => ${4:expr},\n}", doc: "Match expression" },
+                    { label: "impl", insertText: "impl ${1:Type} {\n\t${2}\n}", doc: "Implement methods" },
+                  ]);
+                  registerSnippets("cpp", [
+                    { label: "cout", insertText: 'std::cout << ${1:"Hello"} << std::endl;', doc: "Print to stdout" },
+                    { label: "for", insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t${3}\n}", doc: "For loop" },
+                    { label: "class", insertText: "class ${1:ClassName} {\npublic:\n\t${2}\n};", doc: "Class definition" },
+                    { label: "#include", insertText: "#include <${1:iostream}>", doc: "Include header" },
+                  ]);
                 } catch {
-                  // ignore
+                  // ignore — non-critical enhancement
                 }
               }}
               onMount={(editor) => {
+                editorRef.current = editor;
                 // Keep reference to editor to avoid resetting value which can move cursor
                 // Ensure the editor doesn't re-render the value unless the file actually changes
                 editor.updateOptions({ automaticLayout: true, smoothScrolling: true, cursorBlinking: "blink" });
@@ -526,60 +645,91 @@ export function PublicChallengeClient({ token }: { token: string }) {
 
         {/* Right Panel */}
         <div className="flex flex-col border-l border-white/10 bg-slate-900/50 overflow-hidden" style={{ width: `${rightPanelWidth}px` }} ref={rightPanelRef} data-right-panel>
-          {/* Preview Section */}
-          <div className="flex flex-col min-h-0 overflow-hidden w-full" style={{ flex: `${rightPanelSplitRatio}` }}>
-            <SandpackProvider
-              key={`runtime-${runtimeVersion}`}
-              template={sandpackRuntime.template}
-              files={sandpackRuntime.files}
-              customSetup={sandpackRuntime.customSetup}
-              options={{
-                activeFile: sandpackRuntime.activeFile,
-                visibleFiles: sandpackRuntime.visibleFiles,
-                externalResources: sandpackRuntime.externalResources,
-              }}
-            >
-              <SandpackLayout className="!h-full !w-full !rounded-none !border-0 !bg-transparent">
-                <div className="flex flex-col w-full h-full bg-white">
-                  <div className="flex-shrink-0 border-b border-slate-200 px-3 py-2">
-                    <p className="text-xs font-semibold text-slate-900">Preview</p>
-                  </div>
-                  <div className="flex-1 w-full min-h-0 overflow-auto">
-                    <SandpackPreview className="!h-full !w-full" />
-                  </div>
-                </div>
-              </SandpackLayout>
-            </SandpackProvider>
-          </div>
+          {SANDPACK_LANGS.has(runtimeLanguage) ? (
+            <>
+              {/* Sandpack Preview + Console for browser languages */}
+              <div className="flex flex-col min-h-0 overflow-hidden w-full" style={{ flex: `${rightPanelSplitRatio}` }}>
+                <SandpackProvider
+                  key={`runtime-${runtimeVersion}`}
+                  template={sandpackRuntime.template}
+                  files={sandpackRuntime.files}
+                  customSetup={sandpackRuntime.customSetup}
+                  options={{
+                    activeFile: sandpackRuntime.activeFile,
+                    visibleFiles: sandpackRuntime.visibleFiles,
+                    externalResources: sandpackRuntime.externalResources,
+                  }}
+                >
+                  <SandpackLayout className="!h-full !w-full !rounded-none !border-0 !bg-transparent">
+                    <div className="flex flex-col w-full h-full bg-white">
+                      <div className="flex-shrink-0 border-b border-slate-200 px-3 py-2">
+                        <p className="text-xs font-semibold text-slate-900">Preview</p>
+                      </div>
+                      <div className="flex-1 w-full min-h-0 overflow-auto">
+                        <SandpackPreview className="!h-full !w-full" />
+                      </div>
+                    </div>
+                  </SandpackLayout>
+                </SandpackProvider>
+              </div>
 
-          {/* Resize Separator between Preview and Console */}
-          <ResizablePanelSeparator onDragStart={handleRightPanelSplitResize} direction="horizontal" />
+              <ResizablePanelSeparator onDragStart={handleRightPanelSplitResize} direction="horizontal" />
 
-          {/* Console Section */}
-          <div className="flex flex-col min-h-0" style={{ flex: `${1 - rightPanelSplitRatio}` }}>
-            <SandpackProvider
-              key={`runtime-${runtimeVersion}`}
-              template={sandpackRuntime.template}
-              files={sandpackRuntime.files}
-              customSetup={sandpackRuntime.customSetup}
-              options={{
-                activeFile: sandpackRuntime.activeFile,
-                visibleFiles: sandpackRuntime.visibleFiles,
-                externalResources: sandpackRuntime.externalResources,
-              }}
-            >
-              <SandpackLayout className="!h-full !rounded-none !border-0 !bg-transparent">
-                <div className="flex-1 flex flex-col min-h-0 bg-slate-900/80 border-t border-white/10">
-                  <div className="flex-shrink-0 border-b border-white/10 px-3 py-2">
-                    <p className="text-xs font-semibold text-white">Console</p>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <SandpackConsole className="!h-full !bg-slate-900 !text-slate-100 text-xs" />
-                  </div>
-                </div>
-              </SandpackLayout>
-            </SandpackProvider>
-          </div>
+              <div className="flex flex-col min-h-0" style={{ flex: `${1 - rightPanelSplitRatio}` }}>
+                <SandpackProvider
+                  key={`runtime-${runtimeVersion}`}
+                  template={sandpackRuntime.template}
+                  files={sandpackRuntime.files}
+                  customSetup={sandpackRuntime.customSetup}
+                  options={{
+                    activeFile: sandpackRuntime.activeFile,
+                    visibleFiles: sandpackRuntime.visibleFiles,
+                    externalResources: sandpackRuntime.externalResources,
+                  }}
+                >
+                  <SandpackLayout className="!h-full !rounded-none !border-0 !bg-transparent">
+                    <div className="flex-1 flex flex-col min-h-0 bg-slate-900/80 border-t border-white/10">
+                      <div className="flex-shrink-0 border-b border-white/10 px-3 py-2">
+                        <p className="text-xs font-semibold text-white">Console</p>
+                      </div>
+                      <div className="flex-1 min-h-0 overflow-hidden">
+                        <SandpackConsole className="!h-full !bg-slate-900 !text-slate-100 text-xs" />
+                      </div>
+                    </div>
+                  </SandpackLayout>
+                </SandpackProvider>
+              </div>
+            </>
+          ) : (
+            /* Server-side execution output panel */
+            <div className="flex flex-col h-full bg-slate-950 font-mono">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 flex-shrink-0">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Output — {runtimeLanguage}</p>
+                {execOutput && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${execOutput.exitCode === 0 ? "bg-emerald-900/60 text-emerald-300" : "bg-rose-900/60 text-rose-300"}`}>
+                    exit {execOutput.exitCode}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
+                {!execOutput && !serverRunning && <p className="text-slate-600 italic">Press ▶ Run to execute your code</p>}
+                {serverRunning && <p className="text-slate-400 animate-pulse">Running…</p>}
+                {execOutput && (
+                  <>
+                    {execOutput.compile?.exitCode !== 0 && execOutput.compile?.stderr && (
+                      <div>
+                        <p className="text-rose-400 font-semibold mb-1">Compile error</p>
+                        <pre className="text-rose-300 whitespace-pre-wrap leading-relaxed">{execOutput.compile.stderr}</pre>
+                      </div>
+                    )}
+                    {execOutput.stdout && <pre className="text-emerald-300 whitespace-pre-wrap leading-relaxed">{execOutput.stdout}</pre>}
+                    {execOutput.stderr && <pre className="text-rose-300 whitespace-pre-wrap leading-relaxed">{execOutput.stderr}</pre>}
+                    {!execOutput.stdout && !execOutput.stderr && !(execOutput.compile?.exitCode !== 0) && <p className="text-slate-500 italic">(no output)</p>}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
