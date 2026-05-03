@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SandpackConsole, SandpackLayout, SandpackPreview, SandpackProvider } from "@codesandbox/sandpack-react";
 import { Spinner } from "@/components/ui/Spinner";
+import { Play, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
@@ -232,10 +233,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
     (path: string) => {
       if (!workspace) return;
       const remaining = workspace.files.filter((f) => f.path !== path);
-      const nextActive =
-        workspace.activePath === path
-          ? (remaining[0]?.path ?? "index.html")
-          : workspace.activePath;
+      const nextActive = workspace.activePath === path ? (remaining[0]?.path ?? "index.html") : workspace.activePath;
       const updatedWorkspace = { ...workspace, files: remaining, activePath: nextActive };
       setWorkspace(updatedWorkspace);
       syncCode(serializeWorkspace(updatedWorkspace), runtimeLanguage);
@@ -488,7 +486,8 @@ export function PublicChallengeClient({ token }: { token: string }) {
               ))}
             </select>
             <Button variant="secondary" size="sm" onClick={SANDPACK_LANGS.has(runtimeLanguage) ? handleRun : handleServerRun} loading={serverRunning}>
-              {SANDPACK_LANGS.has(runtimeLanguage) ? "Run" : serverRunning ? "Running…" : "▶ Run"}
+              <Play className="inline-block mr-2 h-4 w-4" />
+              {SANDPACK_LANGS.has(runtimeLanguage) ? "Run" : serverRunning ? "Running…" : "Run"}
             </Button>
             <Button size="sm" onClick={handleSubmit} loading={submitting}>
               {submitting ? "Submitting…" : "Submit"}
@@ -558,20 +557,20 @@ export function PublicChallengeClient({ token }: { token: string }) {
                   key={file.path}
                   className={`group flex w-full items-center rounded px-2 py-1 text-xs transition-colors ${file.path === workspace.activePath ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400 hover:bg-white/5"}`}
                 >
-                  <button
-                    className="flex-1 text-left truncate"
-                    onClick={() => setWorkspace({ ...workspace, activePath: file.path })}
-                  >
+                  <button className="flex-1 text-left truncate" onClick={() => setWorkspace({ ...workspace, activePath: file.path })}>
                     <span className="truncate">{file.path.split("/").pop()}</span>
                   </button>
                   <span className="ml-2 text-[9px] uppercase tracking-[0.1em] text-slate-600 flex-shrink-0">{file.language}</span>
                   {!CORE_FILES.has(file.path) && (
                     <button
                       title={`Delete ${file.path}`}
-                      onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.path); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(file.path);
+                      }}
                       className="ml-1 flex-shrink-0 opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-400 transition-opacity"
                     >
-                      ✕
+                      <X className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -768,7 +767,11 @@ export function PublicChallengeClient({ token }: { token: string }) {
                 )}
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
-                {!execOutput && !serverRunning && <p className="text-slate-600 italic">Press ▶ Run to execute your code</p>}
+                {!execOutput && !serverRunning && (
+                  <p className="text-slate-600 italic">
+                    Press <Play className="inline-block h-4 w-4 mx-1 align-middle" /> Run to execute your code
+                  </p>
+                )}
                 {serverRunning && <p className="text-slate-400 animate-pulse">Running…</p>}
                 {execOutput && (
                   <>

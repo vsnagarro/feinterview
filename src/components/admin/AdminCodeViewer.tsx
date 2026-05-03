@@ -1,58 +1,59 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import dynamic from 'next/dynamic'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
-import { Spinner } from '@/components/ui/Spinner'
-import { toast } from '@/components/ui/Toast'
-import { useAdminCodeWatch } from '@/lib/realtime/useAdminCodeWatch'
-import { LANGUAGE_LABELS } from '@/types/app'
-import type { CodeAnalysis } from '@/types/app'
-import { formatDate } from '@/lib/utils'
+import { useState } from "react";
+import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/Button";
+import { X, Check } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
+import { Spinner } from "@/components/ui/Spinner";
+import { toast } from "@/components/ui/Toast";
+import { useAdminCodeWatch } from "@/lib/realtime/useAdminCodeWatch";
+import { LANGUAGE_LABELS } from "@/types/app";
+import type { CodeAnalysis } from "@/types/app";
+import { formatDate } from "@/lib/utils";
 
-const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 interface AdminCodeViewerProps {
-  linkId: string
-  problemStatement: string
-  candidateName: string | null
+  linkId: string;
+  problemStatement: string;
+  candidateName: string | null;
 }
 
 export function AdminCodeViewer({ linkId, problemStatement, candidateName }: AdminCodeViewerProps) {
-  const { code, language, lastUpdated, connected, takeSnapshot } = useAdminCodeWatch(linkId)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState<CodeAnalysis | null>(null)
-  const [snapshotting, setSnapshotting] = useState(false)
+  const { code, language, lastUpdated, connected, takeSnapshot } = useAdminCodeWatch(linkId);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<CodeAnalysis | null>(null);
+  const [snapshotting, setSnapshotting] = useState(false);
 
   async function handleAnalyze() {
     if (!code.trim()) {
-      toast('No code to analyze yet', 'info')
-      return
+      toast("No code to analyze yet", "info");
+      return;
     }
-    setAnalyzing(true)
+    setAnalyzing(true);
     try {
-      const res = await fetch('/api/ai/analyze-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/ai/analyze-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ linkId, code, language, problemStatement }),
-      })
-      if (!res.ok) throw new Error('Analysis failed')
-      const data: CodeAnalysis = await res.json()
-      setAnalysis(data)
-      toast('Analysis complete', 'success')
+      });
+      if (!res.ok) throw new Error("Analysis failed");
+      const data: CodeAnalysis = await res.json();
+      setAnalysis(data);
+      toast("Analysis complete", "success");
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Error', 'error')
+      toast(err instanceof Error ? err.message : "Error", "error");
     } finally {
-      setAnalyzing(false)
+      setAnalyzing(false);
     }
   }
 
   async function handleSnapshot() {
-    setSnapshotting(true)
-    await takeSnapshot(analysis ?? undefined)
-    setSnapshotting(false)
-    toast('Snapshot saved', 'success')
+    setSnapshotting(true);
+    await takeSnapshot(analysis ?? undefined);
+    setSnapshotting(false);
+    toast("Snapshot saved", "success");
   }
 
   return (
@@ -63,18 +64,14 @@ export function AdminCodeViewer({ linkId, problemStatement, candidateName }: Adm
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-slate-900">Live Code</h2>
             {candidateName && <span className="text-sm text-slate-500">— {candidateName}</span>}
-            <Badge variant="info">
-              {LANGUAGE_LABELS[language as keyof typeof LANGUAGE_LABELS] ?? language}
-            </Badge>
+            <Badge variant="info">{LANGUAGE_LABELS[language as keyof typeof LANGUAGE_LABELS] ?? language}</Badge>
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-              <span className="text-xs text-slate-400">{connected ? 'Live' : 'Reconnecting…'}</span>
+              <span className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400" : "bg-slate-400"}`} />
+              <span className="text-xs text-slate-400">{connected ? "Live" : "Reconnecting…"}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {lastUpdated && (
-              <span className="text-xs text-slate-400">Updated {formatDate(lastUpdated)}</span>
-            )}
+            {lastUpdated && <span className="text-xs text-slate-400">Updated {formatDate(lastUpdated)}</span>}
             <Button size="sm" variant="secondary" loading={snapshotting} onClick={handleSnapshot}>
               Save snapshot
             </Button>
@@ -83,17 +80,17 @@ export function AdminCodeViewer({ linkId, problemStatement, candidateName }: Adm
             </Button>
           </div>
         </div>
-        <div className="flex-1 border border-slate-200 rounded-lg overflow-hidden min-h-0" style={{ minHeight: '400px' }}>
+        <div className="flex-1 border border-slate-200 rounded-lg overflow-hidden min-h-0" style={{ minHeight: "400px" }}>
           <MonacoEditor
             height="100%"
             language={language}
-            value={code || '// Waiting for candidate to start typing…'}
+            value={code || "// Waiting for candidate to start typing…"}
             options={{
               readOnly: true,
               minimap: { enabled: false },
               fontSize: 13,
               scrollBeyondLastLine: false,
-              wordWrap: 'on',
+              wordWrap: "on",
             }}
             theme="vs-light"
           />
@@ -105,7 +102,9 @@ export function AdminCodeViewer({ linkId, problemStatement, candidateName }: Adm
         <div className="w-80 shrink-0 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-slate-900">AI Analysis</h2>
-            <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">×</button>
+            <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -120,7 +119,9 @@ export function AdminCodeViewer({ linkId, problemStatement, candidateName }: Adm
                 <ul className="space-y-1">
                   {analysis.strengths.map((s, i) => (
                     <li key={i} className="text-sm text-slate-600 flex gap-2">
-                      <span className="text-emerald-500 shrink-0">✓</span>
+                      <span className="text-emerald-500 shrink-0">
+                        <Check className="h-4 w-4 inline-block" />
+                      </span>
                       {s}
                     </li>
                   ))}
@@ -134,9 +135,7 @@ export function AdminCodeViewer({ linkId, problemStatement, candidateName }: Adm
                 <ul className="space-y-2">
                   {(analysis.issues as unknown as Array<{ severity: string; description: string }>).map((issue, i) => (
                     <li key={i} className="text-sm">
-                      <Badge variant={issue.severity === 'critical' ? 'danger' : issue.severity === 'major' ? 'warning' : 'default'}>
-                        {issue.severity}
-                      </Badge>
+                      <Badge variant={issue.severity === "critical" ? "danger" : issue.severity === "major" ? "warning" : "default"}>{issue.severity}</Badge>
                       <p className="text-slate-600 mt-1">{issue.description}</p>
                     </li>
                   ))}
@@ -170,5 +169,5 @@ export function AdminCodeViewer({ linkId, problemStatement, candidateName }: Adm
         </div>
       )}
     </div>
-  )
+  );
 }

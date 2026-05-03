@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { ChevronRight } from "lucide-react";
 import { formatDateShort } from "@/lib/utils";
 import type { InterviewProfile, Difficulty } from "@/types/app";
 
@@ -57,7 +58,9 @@ export default async function ProfilesPage() {
                 </div>
                 {p.notes && <p className="text-xs text-slate-400 mt-1 truncate max-w-xl">{p.notes}</p>}
               </div>
-              <span className="text-sky-600 text-sm shrink-0">View →</span>
+              <span className="text-sky-600 text-sm shrink-0 inline-flex items-center">
+                View <ChevronRight className="h-4 w-4 ml-2" />
+              </span>
             </Link>
           ))}
         </div>

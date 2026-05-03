@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { FileText, ExternalLink } from "lucide-react";
 import { toast } from "@/components/ui/Toast";
 
 const ALLOWED_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
@@ -116,7 +117,7 @@ export function CandidateResumeUpload({ candidateId, currentResumeUrl, currentSi
       {filename ? (
         <div className="flex items-center justify-between gap-4 bg-slate-50 rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">📄</span>
+            <FileText className="h-6 w-6 text-slate-500" />
             <div>
               <p className="text-sm font-medium text-slate-800">{filename}</p>
               {uploadedAt && <p className="text-xs text-slate-400">Uploaded {uploadedAt}</p>}
@@ -125,7 +126,7 @@ export function CandidateResumeUpload({ candidateId, currentResumeUrl, currentSi
           {signedUrl ? (
             <a href={signedUrl} target="_blank" rel="noopener noreferrer">
               <Button size="sm" variant="secondary">
-                View Resume ↗
+                <ExternalLink className="mr-2 h-4 w-4" /> View Resume
               </Button>
             </a>
           ) : (
@@ -134,7 +135,7 @@ export function CandidateResumeUpload({ candidateId, currentResumeUrl, currentSi
         </div>
       ) : (
         <div className="flex items-center gap-3 bg-slate-50 rounded-lg p-4 text-sm text-slate-500 border-2 border-dashed border-slate-200">
-          <span className="text-2xl">📄</span>
+          <FileText className="h-6 w-6 text-slate-500" />
           <div>
             <p className="font-medium text-slate-600">No resume uploaded yet</p>
             <p className="text-xs text-slate-400 mt-0.5">PDF, DOC, or DOCX — max 5 MB</p>

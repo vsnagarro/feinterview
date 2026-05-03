@@ -7,6 +7,7 @@ import { LanguageSelector } from "./LanguageSelector";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
+import { Play } from "lucide-react";
 import { useCodeSync } from "@/lib/realtime/useCodeSync";
 import { createClient } from "@/lib/supabase/client";
 
@@ -170,7 +171,7 @@ export function CandidateEditor({ linkId, starterCode, supportedLanguages }: Can
           </div>
           {!isBrowserLang && (
             <Button size="sm" variant="secondary" loading={running} onClick={handleRun} title={`Run ${language} code on server`}>
-              ▶ Run
+              <Play className="inline-block mr-2 h-4 w-4" /> Run
             </Button>
           )}
           {submitted ? (
@@ -250,7 +251,11 @@ export function CandidateEditor({ linkId, starterCode, supportedLanguages }: Can
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
-              {!hasOutput && !running && <p className="text-slate-600 italic">Press ▶ Run to execute your code</p>}
+              {!hasOutput && !running && (
+                <p className="text-slate-600 italic">
+                  Press <Play className="inline-block h-4 w-4 mx-1 align-middle" /> Run to execute your code
+                </p>
+              )}
               {running && <p className="text-slate-400 animate-pulse">Running…</p>}
               {hasOutput && (
                 <>

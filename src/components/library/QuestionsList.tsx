@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
+import { Trash2, Star, ChevronDown, ArrowRight, Check } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Question = Database["public"]["Tables"]["questions"]["Row"];
@@ -229,12 +230,12 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
               Select all
             </Button>
             <Button size="sm" variant="danger" loading={deleting} onClick={handleDeleteSelected}>
-              🗑️ Delete selected
+              <Trash2 className="mr-2 h-4 w-4" /> Delete selected
             </Button>
           </>
         )}
         <Button size="sm" variant="secondary" loading={augmenting} onClick={handleAugmentAll} disabled={filtered.length === 0}>
-          ✨ Augment all
+          <Star className="mr-2 h-4 w-4" /> Augment all
         </Button>
         <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
           {showAdd ? "Cancel" : "+ Add"}
@@ -333,13 +334,16 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
               <div className="flex items-center gap-2 shrink-0">
                 {q.category && <span className="text-xs text-slate-400">{q.category}</span>}
                 <Badge variant={levelVariant[q.level as keyof typeof levelVariant] ?? "default"}>{q.level}</Badge>
-                {q.simple_explanation && <Badge variant="success">✓ Augmented</Badge>}
+                {q.simple_explanation && (
+                  <Badge variant="success">
+                    <Check className="inline-block mr-1 h-3 w-3" />
+                    Augmented
+                  </Badge>
+                )}
                 <button onClick={() => handleDeleteQuestion(q.id)} className="text-slate-400 hover:text-red-500 text-xs">
-                  🗑️
+                  <Trash2 className="h-4 w-4" />
                 </button>
-                <span className={cn("text-slate-400 transition-transform text-xs", expanded === q.id && "rotate-180")} onClick={() => setExpanded(expanded === q.id ? null : q.id)}>
-                  ▼
-                </span>
+                <ChevronDown onClick={() => setExpanded(expanded === q.id ? null : q.id)} className={cn("text-slate-400 transition-transform h-4 w-4", expanded === q.id && "rotate-180")} />
               </div>
             </div>
             {expanded === q.id && (
@@ -365,7 +369,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                       <ul className="mt-2 space-y-1 border-t border-sky-100 pt-2">
                         {q.examples.map((ex: string, i: number) => (
                           <li key={i} className="text-xs text-sky-800 flex gap-1.5">
-                            <span className="text-sky-400 shrink-0">→</span>
+                            <ArrowRight className="text-sky-400 shrink-0 h-3 w-3" />
                             <span>{ex}</span>
                           </li>
                         ))}
@@ -416,7 +420,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
 
                 {!q.simple_explanation && (
                   <Button size="sm" variant="secondary" loading={augmenting} onClick={() => handleAugmentQuestion(q.id)} className="mt-4">
-                    ✨ Augment with AI
+                    <Star className="mr-2 h-4 w-4" /> Augment with AI
                   </Button>
                 )}
               </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import type { Difficulty, GeneratedQuestion, GeneratedSnippet, InterviewProfile } from "@/types/app";
+import { ChevronRight, Check } from "lucide-react";
 
 type Step = "candidate" | "jd" | "review" | "generating";
 type NavigableStep = "candidate" | "jd" | "review";
@@ -423,8 +424,14 @@ export function SessionForm({ profile, draftId }: { profile?: InterviewProfile; 
         {progressMessage && <p className="text-sm text-sky-600">{progressMessage}</p>}
         {result && (
           <div className="text-left bg-slate-50 rounded-lg p-4 mt-4">
-            <p className="text-sm text-emerald-600 font-medium">✓ {result.questions.length} questions generated</p>
-            <p className="text-sm text-emerald-600 mt-1">✓ {result.snippets.length} code snippets generated</p>
+            <p className="text-sm text-emerald-600 font-medium">
+              <Check className="inline-block h-4 w-4 mr-2" />
+              {result.questions.length} questions generated
+            </p>
+            <p className="text-sm text-emerald-600 mt-1">
+              <Check className="inline-block h-4 w-4 mr-2" />
+              {result.snippets.length} code snippets generated
+            </p>
           </div>
         )}
       </div>
@@ -439,7 +446,7 @@ export function SessionForm({ profile, draftId }: { profile?: InterviewProfile; 
           <button key={s} onClick={() => setStep(s)} className={`flex items-center gap-2 text-sm ${step === s ? "text-sky-600 font-medium" : "text-slate-400"}`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === s ? "bg-sky-600 text-white" : "bg-slate-200 text-slate-500"}`}>{i + 1}</span>
             {s === "candidate" ? "Candidate" : s === "jd" ? "Job Description" : "Review & Generate"}
-            {i < 2 && <span className="text-slate-300 ml-2">→</span>}
+            {i < 2 && <ChevronRight className="text-slate-300 ml-2 h-4 w-4" />}
           </button>
         ))}
       </div>
@@ -468,7 +475,7 @@ export function SessionForm({ profile, draftId }: { profile?: InterviewProfile; 
               Save as Draft
             </Button>
             <Button onClick={() => setStep("jd")} disabled={!candidate.name.trim()}>
-              Next: Job Description →
+              Next: Job Description <ChevronRight className="inline-block h-4 w-4 ml-2" />
             </Button>
           </div>
         </div>
@@ -494,7 +501,9 @@ export function SessionForm({ profile, draftId }: { profile?: InterviewProfile; 
               <Button variant="secondary" loading={savingDraft} onClick={saveDraft}>
                 Save as Draft
               </Button>
-              <Button onClick={() => setStep("review")}>Next: Review →</Button>
+              <Button onClick={() => setStep("review")}>
+                Next: Review <ChevronRight className="inline-block h-4 w-4 ml-2" />
+              </Button>
             </div>
           </div>
         </div>

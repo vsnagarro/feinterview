@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { ChevronRight, Check } from "lucide-react";
 import { formatDateShort } from "@/lib/utils";
 import type { InterviewProfile, Difficulty } from "@/types/app";
 
@@ -108,8 +109,8 @@ export default async function DashboardPage() {
         <div className="card overflow-hidden mb-6">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="font-semibold text-slate-900">Job Profiles</h2>
-            <Link href="/profiles" className="text-sm text-sky-600 hover:underline">
-              Manage →
+            <Link href="/profiles" className="text-sm text-sky-600 hover:underline inline-flex items-center">
+              Manage <ChevronRight className="h-4 w-4 ml-2" />
             </Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
@@ -126,15 +127,17 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <span className="text-sky-600 text-xs shrink-0 group-hover:underline mt-0.5">Start →</span>
+                  <span className="text-sky-600 text-xs shrink-0 group-hover:underline mt-0.5 inline-flex items-center">
+                    Start <ChevronRight className="h-4 w-4 ml-2" />
+                  </span>
                 </div>
               </Link>
             ))}
           </div>
           {profileCount > recentProfiles.length && (
             <div className="p-3 border-t border-slate-100 text-center">
-              <Link href="/profiles" className="text-sm text-sky-600 hover:underline">
-                View all {profileCount} profiles →
+              <Link href="/profiles" className="text-sm text-sky-600 hover:underline inline-flex items-center">
+                View all {profileCount} profiles <ChevronRight className="h-4 w-4 ml-2" />
               </Link>
             </div>
           )}
@@ -145,8 +148,8 @@ export default async function DashboardPage() {
       <div className="card overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">All Interview Sessions</h2>
-          <Link href="/sessions" className="text-sm text-sky-600 hover:underline">
-            Manage →
+          <Link href="/sessions" className="text-sm text-sky-600 hover:underline inline-flex items-center">
+            Manage <ChevronRight className="h-4 w-4 ml-2" />
           </Link>
         </div>
 
@@ -201,9 +204,24 @@ export default async function DashboardPage() {
                       </td>
                       <td className="p-3 text-center">{challengeCount > 0 ? <span className="font-medium">{challengeCount}</span> : <span className="text-slate-300">—</span>}</td>
                       <td className="p-3 text-center">
-                        {submissionCount > 0 ? <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">✓ {submissionCount}</span> : <span className="text-slate-300">—</span>}
+                        {submissionCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                            <Check className="h-4 w-4" /> {submissionCount}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
-                      <td className="p-3 text-center">{hasFeedback ? <span className="text-emerald-600 text-xs">✓ Added</span> : <span className="text-slate-300 text-xs">—</span>}</td>
+                      <td className="p-3 text-center">
+                        {hasFeedback ? (
+                          <span className="text-emerald-600 text-xs">
+                            <Check className="inline-block h-4 w-4 mr-1" />
+                            Added
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
                       <td className="p-3 text-center">
                         {hasResume ? (
                           <Link href={`/sessions/${session.id}`} className="text-sky-600 text-xs hover:underline">

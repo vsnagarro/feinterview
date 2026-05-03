@@ -4,6 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Trash2, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
@@ -166,7 +167,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
             <>
               <span className="text-sm text-slate-400">{selectedIds.size} selected</span>
               <Button size="sm" variant="danger" loading={deleting} onClick={handleDeleteSelected}>
-                🗑️ Delete selected
+                <Trash2 className="mr-2 h-4 w-4" /> Delete selected
               </Button>
             </>
           )}
@@ -205,7 +206,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
             className="w-36"
           />
           <Button size="sm" variant={sortOrder === "asc" ? "primary" : "secondary"} onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")} className="px-2">
-            {sortOrder === "asc" ? "↑" : "↓"}
+            {sortOrder === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
           </Button>
         </div>
       </div>
@@ -289,7 +290,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
                 <Badge variant="info">{s.language}</Badge>
                 <Badge variant={s.difficulty === "senior" ? "danger" : s.difficulty === "junior" ? "success" : "warning"}>{s.difficulty}</Badge>
                 <button onClick={() => handleDeleteSnippet(s.id)} className="text-slate-400 hover:text-red-500 text-xs">
-                  🗑️
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -308,7 +309,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
                 )}
                 <div className="px-4 pb-3 flex gap-2">
                   <Button size="sm" variant="secondary" loading={gistExporting === s.id} onClick={() => exportToGist(s)} title="Export this snippet to a new GitHub Gist">
-                    ↗ Export to Gist
+                    <ExternalLink className="mr-2 h-4 w-4" /> Export to Gist
                   </Button>
                 </div>
               </div>

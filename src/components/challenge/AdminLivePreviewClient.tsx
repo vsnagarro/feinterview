@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { PublicChallengeClient } from "./PublicChallengeClient";
 import { Button } from "@/components/ui/Button";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
 
@@ -46,7 +47,13 @@ export function AdminLivePreviewClient({ linkToken, candidateName, sessionId, is
         <div className="flex items-center gap-2">
           <input title="Copy link to clipboard" type="text" value={shareableLink} readOnly className="hidden sm:block px-3 py-1 text-xs bg-slate-900 border border-white/10 rounded text-slate-300" />
           <Button size="sm" onClick={handleCopyLink} className="whitespace-nowrap">
-            {copied ? "✓ Copied" : "Copy Link"}
+            {copied ? (
+              <>
+                <Check className="inline-block mr-2 h-4 w-4" /> Copied
+              </>
+            ) : (
+              "Copy Link"
+            )}
           </Button>
         </div>
       </div>

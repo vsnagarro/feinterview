@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ChevronRight, Image as ImageIcon } from "lucide-react";
 import { CandidateResumeUpload } from "@/components/admin/CandidateResumeUpload";
 import { formatDateShort } from "@/lib/utils";
 
@@ -188,7 +189,7 @@ export default async function CandidateDetailPage({ params }: Props) {
                     </div>
                     <Link href={`/sessions/${session.id}`} className="shrink-0">
                       <Button size="sm" variant="secondary">
-                        View Session →
+                        View Session <ChevronRight className="inline-block h-4 w-4 ml-2" />
                       </Button>
                     </Link>
                   </div>
@@ -203,10 +204,10 @@ export default async function CandidateDetailPage({ params }: Props) {
                       </div>
                     ) : (
                       <div className="flex items-center gap-3 bg-slate-50 rounded-lg p-3 border border-dashed border-slate-200">
-                        <span className="text-lg">🖼️</span>
+                        <ImageIcon className="h-6 w-6 text-slate-500" />
                         <p className="text-xs text-slate-500 flex-1">No screenshot attached</p>
-                        <Link href={`/sessions/${session.id}`} className="text-xs text-sky-600 hover:underline shrink-0">
-                          Upload in session →
+                        <Link href={`/sessions/${session.id}`} className="text-xs text-sky-600 hover:underline shrink-0 inline-flex items-center">
+                          Upload in session <ChevronRight className="inline-block h-4 w-4 ml-2" />
                         </Link>
                       </div>
                     )}

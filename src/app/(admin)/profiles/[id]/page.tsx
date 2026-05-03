@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ChevronRight } from "lucide-react";
 import { ProfileForm } from "@/components/admin/ProfileForm";
 import { formatDateShort } from "@/lib/utils";
 import type { InterviewProfile, Difficulty } from "@/types/app";
@@ -231,7 +232,7 @@ export default async function ProfileDetailPage({ params, searchParams }: Props)
                         </div>
                         <Link href={`/sessions/${s.id}`} className="shrink-0">
                           <Button size="sm" variant="secondary">
-                            View →
+                            View <ChevronRight className="inline-block h-4 w-4 ml-2" />
                           </Button>
                         </Link>
                       </div>

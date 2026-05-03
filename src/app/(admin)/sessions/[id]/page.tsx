@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import { ChallengeLinkGenerator } from "@/components/admin/ChallengeLinkGenerator";
 import { SaveToLibraryButton } from "@/components/admin/SaveToLibraryButton";
 import { DeleteSessionButton } from "@/components/admin/DeleteSessionButton";
@@ -186,8 +187,8 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             {resumeSignedUrl && (
               <div className="col-span-2">
                 <span className="text-slate-500">Resume:</span>{" "}
-                <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline text-sm">
-                  View resume ↗
+                <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline text-sm inline-flex items-center">
+                  View resume <ExternalLink className="h-4 w-4 ml-2" />
                 </a>
               </div>
             )}
@@ -207,7 +208,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 <summary className="p-4 flex items-start gap-3 cursor-pointer hover:bg-slate-50 transition-colors list-none">
                   <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 ${q.asked ? "bg-emerald-500 border-emerald-500" : "border-slate-300"}`} />
                   <p className="text-sm text-slate-900 flex-1">{q.question}</p>
-                  <span className="text-slate-400 text-xs group-open:rotate-180 transition-transform shrink-0">▼</span>
+                  <ChevronDown className="text-slate-400 text-xs group-open:rotate-180 transition-transform h-4 w-4 shrink-0" />
                 </summary>
                 <div className="px-11 pb-5 space-y-3">
                   {/* 1. Concise answer */}
@@ -316,7 +317,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                       <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded">{sub.language}</span>
                       <span className="text-xs text-slate-500">{formatDateShort(sub.created_at)}</span>
                     </div>
-                    <span className="text-slate-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+                    <ChevronDown className="text-slate-400 text-xs group-open:rotate-180 transition-transform h-4 w-4" />
                   </summary>
                   <div className="px-4 pb-4">
                     <pre className="bg-slate-900 text-slate-100 text-xs rounded-lg p-4 overflow-x-auto max-h-80">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { DeleteSessionButton } from "@/components/admin/DeleteSessionButton";
 import { formatDateShort } from "@/lib/utils";
@@ -85,7 +86,7 @@ export default async function SessionsPage() {
                   {session.status === "draft" && (
                     <Link href={`/sessions/new?draftId=${session.id}`}>
                       <Button size="sm" variant="secondary">
-                        Resume →
+                        Resume <ChevronRight className="inline-block h-4 w-4 ml-2" />
                       </Button>
                     </Link>
                   )}

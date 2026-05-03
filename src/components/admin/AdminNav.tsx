@@ -4,15 +4,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Grid, User, FileText, Book, Target, ChevronRight, ChevronLeft, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "⊞" },
-  { href: "/candidates", label: "Candidates", icon: "👤" },
-  { href: "/profiles", label: "Job Profiles", icon: "📋" },
-  { href: "/library", label: "Library", icon: "📚" },
-  { href: "/sessions", label: "Interview Sessions", icon: "🎯" },
+  { href: "/dashboard", label: "Dashboard", icon: <Grid className="h-5 w-5" /> },
+  { href: "/candidates", label: "Candidates", icon: <User className="h-5 w-5" /> },
+  { href: "/profiles", label: "Job Profiles", icon: <FileText className="h-5 w-5" /> },
+  { href: "/library", label: "Library", icon: <Book className="h-5 w-5" /> },
+  { href: "/sessions", label: "Interview Sessions", icon: <Target className="h-5 w-5" /> },
 ];
 
 export default function AdminNav({ userEmail }: { userEmail: string }) {
@@ -38,7 +39,7 @@ export default function AdminNav({ userEmail }: { userEmail: string }) {
           className="flex-shrink-0 p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
           title={collapsed ? "Expand" : "Collapse"}
         >
-          <span className="text-lg">{collapsed ? "▶" : "◀"}</span>
+          {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
       </div>
       <nav className="flex-1 p-3 space-y-1">
@@ -59,7 +60,7 @@ export default function AdminNav({ userEmail }: { userEmail: string }) {
       </nav>
       <div className="p-3 border-t border-slate-700">
         <Button variant="ghost" size="sm" onClick={handleSignOut} className={cn("w-full text-slate-300 hover:text-white", collapsed && "px-1")} title={collapsed ? "Sign out" : undefined}>
-          {collapsed ? "⊗" : "Sign out"}
+          {collapsed ? <LogOut className="h-5 w-5" /> : "Sign out"}
         </Button>
       </div>
     </aside>

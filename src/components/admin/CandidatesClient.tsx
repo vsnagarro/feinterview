@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
 import { formatDateShort } from "@/lib/utils";
@@ -149,7 +150,7 @@ export function CandidatesClient({ candidates: initial }: { candidates: Candidat
                 <span className="w-20 text-right text-xs text-slate-400 shrink-0">{formatDateShort(candidate.created_at)}</span>
 
                 <Link href={`/candidates/${candidate.id}`} className="w-6 text-slate-400 hover:text-sky-600 text-sm flex justify-end" title="View candidate">
-                  →
+                  <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
             );
