@@ -92,7 +92,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
         setShowAdd(false);
         toast("Snippet saved", "success");
       }
-    } catch (_error) {
+    } catch {
       setSaving(false);
       toast("Error saving snippet", "error");
     }

@@ -74,13 +74,6 @@ interface ChallengeData {
   liveCodeState?: LiveCodeState | null;
 }
 
-interface Submission {
-  id: string;
-  code: string;
-  language: string;
-  submitted_at: string;
-}
-
 export function PublicChallengeClient({ token }: { token: string }) {
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
@@ -89,7 +82,6 @@ export function PublicChallengeClient({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [runtimeVersion, setRuntimeVersion] = useState(1);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [connected, setConnected] = useState(false);
@@ -229,15 +221,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
 
       const data = await res.json();
       setSuccess("Code submitted successfully!");
-      setSubmissions((prev) => [
-        {
-          id: (data as { id?: string }).id || "unknown",
-          code: submissionCode,
-          language: runtimeLanguage,
-          submitted_at: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
+      void data; // submission stored server-side; no local list needed
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Submission failed");
     } finally {
@@ -512,7 +496,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
                     });
                     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({ allowNonTsExtensions: true });
                   }
-                } catch (e) {
+                } catch {
                   // ignore
                 }
               }}

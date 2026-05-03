@@ -201,7 +201,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
         setShowAdd(false);
         toast("Question added", "success");
       }
-    } catch (error) {
+    } catch {
       setSaving(false);
       toast("Error saving question", "error");
     }
