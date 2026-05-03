@@ -141,9 +141,20 @@ export async function POST(request: Request) {
               snippets: (raw.snippets ?? []).map(validateGeneratedSnippet).filter((s: GeneratedSnippet | null): s is GeneratedSnippet => s !== null),
             };
           } catch {
-            controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: `Failed to parse AI response in batch ${batchIndex + 1}` })}\n\n`));
-            controller.close();
-            return;
+            // Skip the failed batch — emit a warning and continue accumulating from other batches
+            controller.enqueue(
+              enc.encode(
+                `data: ${JSON.stringify({
+                  status: "progress",
+                  completedBatches: batchIndex + 1,
+                  totalBatches: batchCount,
+                  generatedQuestions: aggregatedQuestions.length,
+                  generatedChallenges: aggregatedSnippets.length,
+                  warning: `Batch ${batchIndex + 1} parse failed — skipped`,
+                })}\n\n`,
+              ),
+            );
+            continue;
           }
 
           aggregatedQuestions.push(...(parsed.questions ?? []));
