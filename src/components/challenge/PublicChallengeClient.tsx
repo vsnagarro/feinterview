@@ -225,6 +225,23 @@ export function PublicChallengeClient({ token }: { token: string }) {
     setShowNewFileInput(false);
     syncCode(serializeWorkspace(updatedWorkspace), runtimeLanguage);
   }, [workspace, newFileName, runtimeLanguage, syncCode]);
+
+  const CORE_FILES = new Set(["index.html", "script.js", "styles.css", "main.js", "src/App.tsx", "src/styles.css"]);
+
+  const handleDeleteFile = useCallback(
+    (path: string) => {
+      if (!workspace) return;
+      const remaining = workspace.files.filter((f) => f.path !== path);
+      const nextActive =
+        workspace.activePath === path
+          ? (remaining[0]?.path ?? "index.html")
+          : workspace.activePath;
+      const updatedWorkspace = { ...workspace, files: remaining, activePath: nextActive };
+      setWorkspace(updatedWorkspace);
+      syncCode(serializeWorkspace(updatedWorkspace), runtimeLanguage);
+    },
+    [workspace, runtimeLanguage, syncCode],
+  );
   const sandpackRuntime = useMemo(() => (workspace && challenge ? toSandpackRuntime(workspace, challenge.session.sandboxDependencies) : null), [challenge, workspace]);
   // Stable key derived from the file names (not content) so SandpackProvider
   // remounts when files are added or removed, but NOT on every keystroke.
@@ -537,14 +554,27 @@ export function PublicChallengeClient({ token }: { token: string }) {
             )}
             <div className="overflow-y-auto space-y-1 flex-1">
               {workspace.files.map((file) => (
-                <button
+                <div
                   key={file.path}
-                  onClick={() => setWorkspace({ ...workspace, activePath: file.path })}
-                  className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs transition-colors ${file.path === workspace.activePath ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400 hover:bg-white/5"}`}
+                  className={`group flex w-full items-center rounded px-2 py-1 text-xs transition-colors ${file.path === workspace.activePath ? "bg-cyan-500/20 text-cyan-200" : "text-slate-400 hover:bg-white/5"}`}
                 >
-                  <span className="truncate">{file.path.split("/").pop()}</span>
+                  <button
+                    className="flex-1 text-left truncate"
+                    onClick={() => setWorkspace({ ...workspace, activePath: file.path })}
+                  >
+                    <span className="truncate">{file.path.split("/").pop()}</span>
+                  </button>
                   <span className="ml-2 text-[9px] uppercase tracking-[0.1em] text-slate-600 flex-shrink-0">{file.language}</span>
-                </button>
+                  {!CORE_FILES.has(file.path) && (
+                    <button
+                      title={`Delete ${file.path}`}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.path); }}
+                      className="ml-1 flex-shrink-0 opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-400 transition-opacity"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
