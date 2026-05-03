@@ -67,7 +67,14 @@ export default async function SessionsPage() {
                     {qCount}Q / {cCount}C
                   </span>
                   {session.languages[0] && <Badge variant="default">{session.languages[0]}</Badge>}
-                  <Badge variant={session.status === "active" ? "success" : session.status === "completed" ? "info" : "default"}>{session.status}</Badge>
+                  <Badge variant={session.status === "draft" ? "warning" : session.status === "active" ? "success" : session.status === "completed" ? "info" : "default"}>{session.status}</Badge>
+                  {session.status === "draft" && (
+                    <Link href={`/sessions/new?draftId=${session.id}`}>
+                      <Button size="sm" variant="secondary">
+                        Resume →
+                      </Button>
+                    </Link>
+                  )}
                   <DeleteSessionButton sessionId={session.id} />
                 </div>
               </div>

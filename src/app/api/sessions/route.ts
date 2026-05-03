@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const supabase = await createServiceClient();
 
   const body = await request.json();
-  const { candidateName, candidateEmail, candidateNotes, skills, yearsExp, jdTitle, jdDescription, resumeUrl, extraChecks, targetLevel, trickiness, profileId } = body;
+  const { candidateName, candidateEmail, candidateNotes, skills, yearsExp, jdTitle, jdDescription, resumeUrl, extraChecks, targetLevel, trickiness, profileId, status: requestedStatus } = body;
 
   // Create a default interviewer if none exists
   const defaultInterviewerId = "00000000-0000-0000-0000-000000000001";
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       job_description_id: jdId,
       interviewer_id: defaultInterviewerId,
       languages: ["javascript", "typescript"],
-      status: "active",
+      status: requestedStatus === "draft" ? "draft" : "active",
       expires_at: expiresAt.toISOString(),
       extra_checks: extraChecks || null,
       target_level: targetLevel || null,

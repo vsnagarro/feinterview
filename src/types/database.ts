@@ -40,7 +40,7 @@ export interface Session {
   candidate_id: string;
   job_description_id: string;
   interviewer_id: string;
-  status: "pending" | "active" | "submitted" | "completed" | "expired";
+  status: "draft" | "pending" | "active" | "submitted" | "completed" | "expired";
   languages: string[];
   created_at: string;
   expires_at: string;

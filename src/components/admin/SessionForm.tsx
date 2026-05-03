@@ -13,10 +13,15 @@ import type { Difficulty, GeneratedQuestion, GeneratedSnippet, InterviewProfile 
 type Step = "candidate" | "jd" | "review" | "generating";
 type NavigableStep = "candidate" | "jd" | "review";
 
-export function SessionForm({ profile }: { profile?: InterviewProfile }) {
+export function SessionForm({ profile, draftId }: { profile?: InterviewProfile; draftId?: string }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("candidate");
   const [loading, setLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(!!draftId);
+  const [savingDraft, setSavingDraft] = useState(false);
+  // The session row id for the current draft (set once session is created)
+  const draftSessionIdRef = useRef<string | null>(draftId ?? null);
+  const createdSessionIdRef = useRef<string | null>(draftId ?? null);
 
   const [candidate, setCandidate] = useState({
     name: "",
@@ -72,10 +77,40 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
   } | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   // useRef so catch block always sees the latest value without stale-closure issues
-  const createdSessionIdRef = useRef<string | null>(null);
+  // (draftSessionIdRef / createdSessionIdRef declared above)
 
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedModel, setSelectedModel] = useState("");
+
+  // Load draft data when draftId is provided
+  useEffect(() => {
+    if (!draftId) return;
+    setDraftLoading(true);
+    fetch(`/api/sessions/${draftId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const c = data.candidates;
+        const jdData = data.job_descriptions;
+        if (c) {
+          setCandidate({
+            name: c.name ?? "",
+            email: c.email ?? "",
+            skills: (c.skills ?? []).join(", "),
+            yearsExp: c.experience_level === "senior" ? "8" : c.experience_level === "mid" ? "4" : "1",
+            notes: c.summary ?? "",
+          });
+        }
+        if (jdData) {
+          setJd({ title: jdData.title ?? "", description: jdData.description ?? "" });
+        }
+        if (data.target_level) setTargetLevel(data.target_level);
+        if (data.trickiness != null) setTrickiness(data.trickiness);
+        if (data.extra_checks) setExtraChecks(data.extra_checks);
+        setStep("candidate");
+      })
+      .catch(() => toast("Could not load draft session", "error"))
+      .finally(() => setDraftLoading(false));
+  }, [draftId]);
 
   useEffect(() => {
     Promise.all([
@@ -103,6 +138,59 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: "ai_model", value: model }),
     }).catch(console.error);
+  }
+
+  async function saveDraft(): Promise<string | null> {
+    setSavingDraft(true);
+    try {
+      const existingId = draftSessionIdRef.current;
+      if (existingId) {
+        // PATCH existing session to keep it as draft
+        await fetch(`/api/sessions/${existingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "draft" }),
+        });
+        toast("Draft saved", "success");
+        return existingId;
+      }
+
+      // Create a new session with draft status
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateName: candidate.name || "Draft",
+          candidateEmail: candidate.email || undefined,
+          skills: candidate.skills
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          yearsExp: Number(candidate.yearsExp) || 0,
+          candidateNotes: candidate.notes || undefined,
+          jdTitle: jd.title || undefined,
+          jdDescription: jd.description || undefined,
+          extraChecks: extraChecks || undefined,
+          targetLevel: targetLevel || undefined,
+          trickiness: trickiness !== "" ? Number(trickiness) : undefined,
+          difficulty,
+          profileId: profile?.id ?? undefined,
+          status: "draft",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save draft");
+      const { session } = await res.json();
+      draftSessionIdRef.current = session.id;
+      createdSessionIdRef.current = session.id;
+      toast("Draft saved — you can resume from Sessions", "success");
+      router.replace(`/sessions/new?draftId=${session.id}`);
+      return session.id;
+    } catch {
+      toast("Could not save draft", "error");
+      return null;
+    } finally {
+      setSavingDraft(false);
+    }
   }
 
   async function handleCreateSession() {
@@ -227,13 +315,19 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast(msg, "error");
-      // Clean up the incomplete session if it was created before the failure
+      // Auto-save as draft so the session isn't lost
       if (createdSessionIdRef.current) {
         const sid = createdSessionIdRef.current;
+        await fetch(`/api/sessions/${sid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "draft" }),
+        }).catch(() => console.warn("Could not mark session as draft", sid));
+        toast("Session saved as draft — resume it from Sessions", "info");
         createdSessionIdRef.current = null;
-        await fetch(`/api/sessions/${sid}`, { method: "DELETE" }).catch(() => {
-          console.warn("Could not delete incomplete session", sid);
-        });
+        draftSessionIdRef.current = null;
+        router.push(`/sessions/${sid}`);
+        return;
       }
       setStep("review");
     } finally {
@@ -311,6 +405,15 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
     return publicUrl ?? filename ?? null;
   }
 
+  if (draftLoading) {
+    return (
+      <div className="card p-12 text-center space-y-4">
+        <Spinner className="mx-auto h-8 w-8" />
+        <p className="text-slate-500 text-sm">Loading draft…</p>
+      </div>
+    );
+  }
+
   if (step === "generating") {
     return (
       <div className="card p-12 text-center space-y-4">
@@ -360,7 +463,10 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
             {resumeError && <p className="text-xs text-red-500 mt-1">{resumeError}</p>}
             <p className="text-xs text-slate-400 mt-1">PDF, DOC, or DOCX — max 5 MB</p>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button variant="secondary" loading={savingDraft} onClick={saveDraft} disabled={!candidate.name.trim()}>
+              Save as Draft
+            </Button>
             <Button onClick={() => setStep("jd")} disabled={!candidate.name.trim()}>
               Next: Job Description →
             </Button>
@@ -384,7 +490,12 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
             <Button variant="secondary" onClick={() => setStep("candidate")}>
               ← Back
             </Button>
-            <Button onClick={() => setStep("review")}>Next: Review →</Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" loading={savingDraft} onClick={saveDraft}>
+                Save as Draft
+              </Button>
+              <Button onClick={() => setStep("review")}>Next: Review →</Button>
+            </div>
           </div>
         </div>
       )}
@@ -507,9 +618,14 @@ export function SessionForm({ profile }: { profile?: InterviewProfile }) {
             <Button variant="secondary" onClick={() => setStep("jd")}>
               ← Back
             </Button>
-            <Button onClick={handleCreateSession} loading={loading}>
-              Create Session & Generate Questions
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" loading={savingDraft} onClick={saveDraft}>
+                Save as Draft
+              </Button>
+              <Button onClick={handleCreateSession} loading={loading}>
+                Create Session &amp; Generate Questions
+              </Button>
+            </div>
           </div>
         </div>
       )}
