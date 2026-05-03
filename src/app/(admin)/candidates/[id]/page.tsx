@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CandidateResumeUpload } from "@/components/admin/CandidateResumeUpload";
 import { formatDateShort } from "@/lib/utils";
 
 interface CandidateRecord {
@@ -137,30 +138,13 @@ export default async function CandidateDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Resume */}
-      {candidate.resume_url && (
-        <div className="card p-5">
-          <h2 className="font-semibold text-slate-900 mb-3">Resume</h2>
-          <div className="flex items-center justify-between gap-4 bg-slate-50 rounded-lg p-3">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">📄</span>
-              <div>
-                <p className="text-sm font-medium text-slate-800">{candidate.resume_url.split("/").pop()}</p>
-                <p className="text-xs text-slate-400">Uploaded {formatDateShort(candidate.created_at)}</p>
-              </div>
-            </div>
-            {resumeSignedUrl ? (
-              <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer">
-                <Button size="sm" variant="secondary">
-                  View Resume ↗
-                </Button>
-              </a>
-            ) : (
-              <span className="text-xs text-slate-400">Preview unavailable</span>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Resume — always shown; upload available inline */}
+      <CandidateResumeUpload
+        candidateId={candidate.id}
+        currentResumeUrl={candidate.resume_url}
+        currentSignedUrl={resumeSignedUrl}
+        uploadedAt={candidate.resume_url ? formatDateShort(candidate.created_at) : null}
+      />
 
       {/* Interview Sessions */}
       <div className="card overflow-hidden">
@@ -209,13 +193,24 @@ export default async function CandidateDetailPage({ params }: Props) {
                     </Link>
                   </div>
 
-                  {/* Screenshot */}
-                  {screenshotUrl && (
-                    <div className="mb-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={screenshotUrl} alt="Interview session screenshot" className="rounded-lg border border-slate-200 max-h-48 object-cover" />
-                    </div>
-                  )}
+                  {/* Screenshot — always visible */}
+                  <div className="mb-3">
+                    {screenshotUrl ? (
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 mb-1.5">Session Screenshot</p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={screenshotUrl} alt="Interview session screenshot" className="rounded-lg border border-slate-200 max-h-48 object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 bg-slate-50 rounded-lg p-3 border border-dashed border-slate-200">
+                        <span className="text-lg">🖼️</span>
+                        <p className="text-xs text-slate-500 flex-1">No screenshot attached</p>
+                        <Link href={`/sessions/${session.id}`} className="text-xs text-sky-600 hover:underline shrink-0">
+                          Upload in session →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Feedback */}
                   {session.feedback && (
