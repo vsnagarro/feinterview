@@ -14,6 +14,16 @@ export function useCodeSync({ linkId, onConnected, onCodeUpdate }: UseCodeSyncOp
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dbDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep callbacks in refs so the channel subscription never needs to be torn down
+  // just because a parent component re-rendered and produced new function references.
+  const onCodeUpdateRef = useRef(onCodeUpdate);
+  const onConnectedRef = useRef(onConnected);
+  useEffect(() => {
+    onCodeUpdateRef.current = onCodeUpdate;
+  });
+  useEffect(() => {
+    onConnectedRef.current = onConnected;
+  });
 
   useEffect(() => {
     if (!linkId) return;
@@ -26,16 +36,16 @@ export function useCodeSync({ linkId, onConnected, onCodeUpdate }: UseCodeSyncOp
     // Listen for incoming code updates (e.g., from admin or other users)
     channel
       .on("broadcast", { event: "code_update" }, ({ payload }) => {
-        onCodeUpdate?.(payload.code, payload.language);
+        onCodeUpdateRef.current?.(payload.code, payload.language);
       })
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") onConnected?.();
+        if (status === "SUBSCRIBED") onConnectedRef.current?.();
       });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [linkId, supabase, onConnected, onCodeUpdate]);
+  }, [linkId, supabase]); // callbacks intentionally excluded — accessed via refs above
 
   const syncCode = useCallback(
     (code: string, language: string) => {

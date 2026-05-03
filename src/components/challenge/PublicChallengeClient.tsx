@@ -108,6 +108,9 @@ export function PublicChallengeClient({ token }: { token: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
+  // Flag set to true while executeEdits is running so handleCodeChange ignores
+  // the onChange event it fires — prevents re-broadcasting back to the sender.
+  const isRemoteUpdate = useRef(false);
 
   const { syncCode } = useCodeSync({
     linkId: challenge?.linkId,
@@ -122,8 +125,10 @@ export function PublicChallengeClient({ token }: { token: string }) {
         if (ed) {
           const model = ed.getModel();
           if (model && model.getValue() !== activeCode) {
+            isRemoteUpdate.current = true;
             const fullRange = model.getFullModelRange();
             ed.executeEdits("remote-sync", [{ range: fullRange, text: activeCode, forceMoveMarkers: false }]);
+            isRemoteUpdate.current = false;
           }
         }
         setWorkspace(updatedWorkspace);
@@ -135,8 +140,10 @@ export function PublicChallengeClient({ token }: { token: string }) {
           if (ed) {
             const model = ed.getModel();
             if (model && model.getValue() !== code) {
+              isRemoteUpdate.current = true;
               const fullRange = model.getFullModelRange();
               ed.executeEdits("remote-sync", [{ range: fullRange, text: code, forceMoveMarkers: false }]);
+              isRemoteUpdate.current = false;
             }
           }
           setWorkspace(updateWorkspaceFile(workspace, activeFile.path, code));
@@ -220,6 +227,8 @@ export function PublicChallengeClient({ token }: { token: string }) {
 
   const handleCodeChange = useCallback(
     (value: string | undefined) => {
+      // Ignore onChange events fired by executeEdits during a remote update
+      if (isRemoteUpdate.current) return;
       if (!workspace || !activeFile) return;
       const nextWorkspace = updateWorkspaceFile(workspace, activeFile.path, value || "");
       setWorkspace(nextWorkspace);

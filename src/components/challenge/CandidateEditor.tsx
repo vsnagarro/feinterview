@@ -40,6 +40,7 @@ export function CandidateEditor({ linkId, starterCode, supportedLanguages }: Can
   const [outputHeight, setOutputHeight] = useState(200);
   const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isRemoteUpdate = useRef(false);
 
   const { syncCode } = useCodeSync({
     linkId,
@@ -57,12 +58,15 @@ export function CandidateEditor({ linkId, starterCode, supportedLanguages }: Can
       const current = model.getValue();
       if (current === remoteCode) return; // no-op — avoids cursor jump
       const fullRange = model.getFullModelRange();
+      isRemoteUpdate.current = true;
       ed.executeEdits("remote-sync", [{ range: fullRange, text: remoteCode, forceMoveMarkers: false }]);
+      isRemoteUpdate.current = false;
     },
   });
 
   const handleCodeChange = useCallback(
     (value: string | undefined) => {
+      if (isRemoteUpdate.current) return;
       const newCode = value ?? "";
       setCode(newCode);
       syncCode(newCode, language);
