@@ -44,7 +44,7 @@ export function AdminLivePreviewClient({ linkToken, candidateName, sessionId, is
           <Badge variant={isExpired ? "danger" : "success"}>{isExpired ? "Expired" : `Active`}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <input type="text" value={shareableLink} readOnly className="hidden sm:block px-3 py-1 text-xs bg-slate-900 border border-white/10 rounded text-slate-300" />
+          <input title="Copy link to clipboard" type="text" value={shareableLink} readOnly className="hidden sm:block px-3 py-1 text-xs bg-slate-900 border border-white/10 rounded text-slate-300" />
           <Button size="sm" onClick={handleCopyLink} className="whitespace-nowrap">
             {copied ? "✓ Copied" : "Copy Link"}
           </Button>

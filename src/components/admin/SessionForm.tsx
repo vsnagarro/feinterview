@@ -291,7 +291,7 @@ export function SessionForm() {
           <Textarea label="Notes" value={candidate.notes} onChange={(e) => setCandidate({ ...candidate, notes: e.target.value })} rows={2} placeholder="Any notes about the candidate…" />
           <div>
             <label className="text-sm font-medium block mb-1">Upload resume (optional)</label>
-            <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            <input title="Upload resume" type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)} className="text-sm" />
           </div>
           <div className="flex justify-end">
             <Button onClick={() => setStep("jd")} disabled={!candidate.name.trim()}>
