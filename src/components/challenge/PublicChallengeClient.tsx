@@ -226,6 +226,9 @@ export function PublicChallengeClient({ token }: { token: string }) {
     syncCode(serializeWorkspace(updatedWorkspace), runtimeLanguage);
   }, [workspace, newFileName, runtimeLanguage, syncCode]);
   const sandpackRuntime = useMemo(() => (workspace && challenge ? toSandpackRuntime(workspace, challenge.session.sandboxDependencies) : null), [challenge, workspace]);
+  // Stable key derived from the file names (not content) so SandpackProvider
+  // remounts when files are added or removed, but NOT on every keystroke.
+  const sandpackFilesKey = useMemo(() => (sandpackRuntime ? Object.keys(sandpackRuntime.files).sort().join(",") : ""), [sandpackRuntime]);
 
   const persistWorkspace = useCallback(
     (nextWorkspace: WorkspaceState, nextLanguage: string) => {
@@ -681,7 +684,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
               {/* Sandpack Preview + Console for browser languages */}
               <div className="flex flex-col min-h-0 overflow-hidden w-full" style={{ flex: `${rightPanelSplitRatio}` }}>
                 <SandpackProvider
-                  key={`runtime-${runtimeVersion}`}
+                  key={`runtime-${runtimeVersion}-${sandpackFilesKey}`}
                   template={sandpackRuntime.template}
                   files={sandpackRuntime.files}
                   customSetup={sandpackRuntime.customSetup}
@@ -708,7 +711,7 @@ export function PublicChallengeClient({ token }: { token: string }) {
 
               <div className="flex flex-col min-h-0" style={{ flex: `${1 - rightPanelSplitRatio}` }}>
                 <SandpackProvider
-                  key={`runtime-${runtimeVersion}`}
+                  key={`runtime-${runtimeVersion}-${sandpackFilesKey}`}
                   template={sandpackRuntime.template}
                   files={sandpackRuntime.files}
                   customSetup={sandpackRuntime.customSetup}
