@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { ChallengeLinkGenerator } from "@/components/admin/ChallengeLinkGenerator";
 import { SaveToLibraryButton } from "@/components/admin/SaveToLibraryButton";
 import { DeleteSessionButton } from "@/components/admin/DeleteSessionButton";
+import { SessionFeedback } from "@/components/admin/SessionFeedback";
 import { formatDateShort } from "@/lib/utils";
 
 interface SessionRecord {
@@ -14,6 +15,8 @@ interface SessionRecord {
   candidate_id: string;
   job_description_id: string | null;
   languages: string[];
+  feedback: string | null;
+  screenshot_url: string | null;
 }
 interface Candidate {
   id: string;
@@ -22,6 +25,7 @@ interface Candidate {
   skills: string[];
   experience_level: string | null;
   summary: string | null;
+  resume_url: string | null;
 }
 interface JD {
   id: string;
@@ -67,21 +71,45 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
     supabase.from("code_challenges").select("*").eq("session_id", id).order("created_at"),
   ]);
 
+  // Fetch challenge submissions through challenge_links
+  const challengeIds = (challenges ?? []).map((c: CodeChallenge) => c.id);
+  const { data: links } = challengeIds.length > 0 ? await supabase.from("challenge_links").select("*").in("challenge_id", challengeIds).order("created_at", { ascending: false }) : { data: [] };
+  const challengeLinks = (links as (ChallengeLink & { challenge_id?: string })[] | null) ?? [];
+  const linkIds = challengeLinks.map((l) => l.id);
+  const { data: rawSubmissions } = linkIds.length > 0 ? await supabase.from("challenge_submissions").select("id, created_at, language, code, is_snapshot, link_id").in("link_id", linkIds).order("created_at", { ascending: false }) : { data: [] };
+  const submissions = (rawSubmissions ?? []) as Array<{ id: string; created_at: string; language: string; code: string; is_snapshot: boolean; link_id: string }>;
+
+  // Resume signed URL (private bucket)
   const typedCandidate = candidate as Candidate | null;
+  let resumeSignedUrl: string | null = null;
+  if (typedCandidate?.resume_url) {
+    const service = await createServiceClient();
+    const path = typedCandidate.resume_url.replace(/^resumes\//, "");
+    const { data: sd } = await service.storage.from("resumes").createSignedUrl(path, 3600);
+    resumeSignedUrl = sd?.signedUrl ?? null;
+  }
+
+  // Screenshot signed URL
+  let screenshotSignedUrl: string | null = null;
+  if (typedSession.screenshot_url) {
+    const service = await createServiceClient();
+    const path = typedSession.screenshot_url.replace(/^screenshots\//, "");
+    const { data: sd } = await service.storage.from("screenshots").createSignedUrl(path, 3600);
+    screenshotSignedUrl = sd?.signedUrl ?? null;
+  }
   const typedJD = jd as JD | null;
   const typedQuestions = (questions as SessionQuestion[]) ?? [];
   const typedChallenges = (challenges as CodeChallenge[]) ?? [];
   const unsavedQCount = typedQuestions.filter((q) => !q.question_id).length;
   const unsavedCCount = typedChallenges.filter((c) => !c.snippet_id).length;
-  const challengeIds = typedChallenges.map((challenge) => challenge.id);
-  const { data: links } = challengeIds.length > 0 ? await supabase.from("challenge_links").select("*").in("challenge_id", challengeIds).order("created_at", { ascending: false }) : { data: [] };
-  const challengeLinks = (links as (ChallengeLink & { challenge_id?: string })[] | null) ?? [];
+  const challengeIds2 = typedChallenges.map((challenge) => challenge.id);
   const linksByChallengeId = new Map<string, ChallengeLink[]>();
   challengeLinks.forEach((link) => {
     const challengeId = (link as ChallengeLink & { challenge_id?: string }).challenge_id;
     if (!challengeId) return;
     linksByChallengeId.set(challengeId, [...(linksByChallengeId.get(challengeId) ?? []), link]);
   });
+  void challengeIds2;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -141,6 +169,14 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 <span className="text-slate-500">Summary:</span> {typedCandidate.summary}
               </div>
             )}
+            {resumeSignedUrl && (
+              <div className="col-span-2">
+                <span className="text-slate-500">Resume:</span>{" "}
+                <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline text-sm">
+                  View resume ↗
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -196,6 +232,44 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         ) : (
           <p className="text-sm text-slate-400">No code challenges generated yet.</p>
         )}
+      </div>
+      {submissions.length > 0 && (
+        <div className="card">
+          <div className="p-4 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-900">Code Submissions ({submissions.filter((s) => !s.is_snapshot).length})</h2>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {submissions
+              .filter((s) => !s.is_snapshot)
+              .map((sub) => (
+                <details key={sub.id} className="group">
+                  <summary className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 list-none">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded">{sub.language}</span>
+                      <span className="text-xs text-slate-500">{formatDateShort(sub.created_at)}</span>
+                    </div>
+                    <span className="text-slate-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <pre className="bg-slate-900 text-slate-100 text-xs rounded-lg p-4 overflow-x-auto max-h-80">
+                      <code>{sub.code}</code>
+                    </pre>
+                  </div>
+                </details>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Feedback & Screenshot */}
+      <div className="card p-5">
+        <h2 className="font-semibold text-slate-900 mb-4">Feedback &amp; Notes</h2>
+        <SessionFeedback
+          sessionId={id}
+          initialFeedback={typedSession.feedback}
+          screenshotPath={typedSession.screenshot_url}
+          screenshotSignedUrl={screenshotSignedUrl}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -44,7 +44,39 @@ export function SessionForm() {
     sessionId: string;
   } | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
-  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
+  // useRef so catch block always sees the latest value without stale-closure issues
+  const createdSessionIdRef = useRef<string | null>(null);
+
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedModel, setSelectedModel] = useState("");
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/ai/models")
+        .then((r) => r.json())
+        .catch(() => ({ models: [] })),
+      fetch("/api/settings")
+        .then((r) => r.json())
+        .catch(() => ({})),
+    ]).then(([modelsData, settings]) => {
+      const models: Array<{ id: string; name: string }> = modelsData.models ?? [];
+      setAvailableModels(models);
+      if ((settings as Record<string, string>).ai_model) {
+        setSelectedModel((settings as Record<string, string>).ai_model);
+      } else if (models[0]) {
+        setSelectedModel(models[0].id);
+      }
+    });
+  }, []);
+
+  async function handleModelChange(model: string) {
+    setSelectedModel(model);
+    await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: "ai_model", value: model }),
+    }).catch(console.error);
+  }
 
   async function handleCreateSession() {
     setLoading(true);
@@ -77,7 +109,7 @@ export function SessionForm() {
 
       if (!res.ok) throw new Error("Failed to create session");
       const { session } = await res.json();
-      setCreatedSessionId(session.id);
+      createdSessionIdRef.current = session.id;
 
       // If we have a resume file, upload it now and attach to the created candidate
       try {
@@ -162,18 +194,18 @@ export function SessionForm() {
       }
 
       toast(`Generated ${questionCount} questions and ${challengeCount} code challenges`, "success");
+      createdSessionIdRef.current = null;
       router.push(`/sessions/${session.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast(msg, "error");
       // Clean up the incomplete session if it was created before the failure
-      if (createdSessionId) {
-        try {
-          await fetch(`/api/sessions/${createdSessionId}`, { method: "DELETE" });
-        } catch {
-          // best-effort — log only
-          console.warn("Could not delete incomplete session", createdSessionId);
-        }
+      if (createdSessionIdRef.current) {
+        const sid = createdSessionIdRef.current;
+        createdSessionIdRef.current = null;
+        await fetch(`/api/sessions/${sid}`, { method: "DELETE" }).catch(() => {
+          console.warn("Could not delete incomplete session", sid);
+        });
       }
       setStep("review");
     } finally {
@@ -412,8 +444,15 @@ export function SessionForm() {
             </div>
           </div>
 
+          {availableModels.length > 0 && (
+            <div className="mt-3">
+              <label className="text-sm font-medium block mb-1">AI Model</label>
+              <Select value={selectedModel} onChange={(e) => handleModelChange(e.target.value)} options={availableModels.map((m) => ({ value: m.id, label: m.name }))} />
+            </div>
+          )}
+
           <div className="mt-3">
-            <label className="text-sm font-medium block mb-1">Extra checks (one per line)</label>
+            <label className="text-sm font-medium block mb-1">Extra checks (one per line)</label>{" "}
             <Textarea value={extraChecks} onChange={(e) => setExtraChecks(e.target.value)} rows={3} placeholder="Performance\nAccessibility" />
           </div>
 

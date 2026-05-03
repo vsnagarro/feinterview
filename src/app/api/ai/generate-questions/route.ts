@@ -69,7 +69,10 @@ export async function POST(request: Request) {
   const body: GenerateQuestionsPayload & { generateType?: "questions" | "challenges" | "both"; challengeGuideline?: string } = await request.json();
 
   const ai = getAIClient();
-  const model = process.env.GEMINI_API_KEY ? process.env.GEMINI_MODEL || "models/gemini-2.0-flash" : process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+  // Read model from app_settings (admin-persisted selection), fall back to env
+  const defaultModel = process.env.GEMINI_API_KEY ? process.env.GEMINI_MODEL || "models/gemini-2.5-flash" : process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+  const modelSettingRes = await supabase.from("app_settings").select("value").eq("key", "ai_model").maybeSingle();
+  const model = (modelSettingRes.data as { value?: string } | null)?.value ?? defaultModel;
 
   // Use streaming to avoid Vercel 10s timeout on hobby plan
   const stream = new ReadableStream({
