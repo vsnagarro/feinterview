@@ -459,6 +459,9 @@ createRoot(rootElement).render(
   }
 
   const scriptPath = workspace.template === "tailwind" ? "main.js" : "script.js";
+  // Paths that are handled explicitly and should not be double-added in the loop below
+  const handledPaths = new Set(["index.html", scriptPath, "styles.css"]);
+
   const files: SandpackRuntimeConfig["files"] = {
     "/index.html": {
       code: normalizeStaticHtml(getFile(workspace.files, "index.html")),
@@ -478,10 +481,26 @@ createRoot(rootElement).render(
     };
   }
 
+  // Include every additional file the user created so <script src="utils.js"> etc. work
+  for (const file of workspace.files) {
+    const bare = file.path.startsWith("/") ? file.path.slice(1) : file.path;
+    if (handledPaths.has(bare)) continue;
+    const key = file.path.startsWith("/") ? file.path : `/${file.path}`;
+    files[key] = { code: file.code, active: workspace.activePath === file.path };
+  }
+
+  // Map a workspace path to the Sandpack key
+  const toSandpackKey = (path: string) => {
+    if (path === scriptPath) return "/index.js";
+    if (path === "styles.css") return "/styles.css";
+    if (path === "index.html") return "/index.html";
+    return path.startsWith("/") ? path : `/${path}`;
+  };
+
   return {
     template: "static",
     files,
-    activeFile: workspace.activePath === scriptPath ? "/index.js" : workspace.activePath === "styles.css" ? "/styles.css" : "/index.html",
+    activeFile: toSandpackKey(workspace.activePath),
     visibleFiles: Object.keys(files),
     customSetup: customDependencies ? { dependencies: customDependencies } : undefined,
     externalResources: workspace.template === "tailwind" ? ["https://cdn.tailwindcss.com"] : undefined,

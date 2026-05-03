@@ -202,15 +202,24 @@ export function PublicChallengeClient({ token }: { token: string }) {
 
   const handleAddNewFile = useCallback(() => {
     if (!workspace || !newFileName.trim()) return;
-    const language = newFileName.endsWith(".tsx") || newFileName.endsWith(".jsx") ? "tsx" : newFileName.endsWith(".ts") || newFileName.endsWith(".js") ? "javascript" : "javascript";
-    const filePath = newFileName.startsWith("/") ? newFileName : `/${newFileName}`;
-    // Check if file already exists
-    if (workspace.files.some((f) => f.path === filePath)) {
+    const trimmed = newFileName.trim().replace(/^\//, ""); // strip accidental leading slash
+    const language =
+      trimmed.endsWith(".tsx") || trimmed.endsWith(".jsx")
+        ? "tsx"
+        : trimmed.endsWith(".ts") || trimmed.endsWith(".js")
+          ? "javascript"
+          : trimmed.endsWith(".css")
+            ? "css"
+            : trimmed.endsWith(".html")
+              ? "html"
+              : "javascript";
+    // Check if file already exists (compare bare names)
+    if (workspace.files.some((f) => f.path.replace(/^\//, "") === trimmed)) {
       alert("File already exists!");
       return;
     }
-    const newFile = { path: filePath, language, code: "" };
-    const updatedWorkspace = { ...workspace, files: [...workspace.files, newFile], activePath: filePath };
+    const newFile = { path: trimmed, language, code: "" };
+    const updatedWorkspace = { ...workspace, files: [...workspace.files, newFile], activePath: trimmed };
     setWorkspace(updatedWorkspace);
     setNewFileName("");
     setShowNewFileInput(false);
