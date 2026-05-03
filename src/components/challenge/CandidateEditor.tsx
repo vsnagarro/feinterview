@@ -57,10 +57,12 @@ export function CandidateEditor({ linkId, starterCode, supportedLanguages }: Can
       if (!model) return;
       const current = model.getValue();
       if (current === remoteCode) return; // no-op — avoids cursor jump
-      const fullRange = model.getFullModelRange();
       isRemoteUpdate.current = true;
+      const savedSelection = ed.getSelection();
+      const fullRange = model.getFullModelRange();
       ed.executeEdits("remote-sync", [{ range: fullRange, text: remoteCode, forceMoveMarkers: false }]);
       isRemoteUpdate.current = false;
+      if (savedSelection) ed.setSelection(savedSelection);
     },
   });
 

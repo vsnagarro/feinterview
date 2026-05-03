@@ -229,10 +229,13 @@ function getFile(files: WorkspaceFile[], path: string) {
 }
 
 function normalizeStaticHtml(code: string) {
-  return code
-    .replace(/\.\/main\.js/g, "./index.js")
-    .replace(/\.\/script\.js/g, "./index.js")
-    .replace(/<script src="https:\/\/cdn\.tailwindcss\.com"><\/script>\s*/g, "");
+  return (
+    code
+      // Normalise script src to ./index.js regardless of whether ./ prefix is present
+      .replace(/src="(?:\.\/)?main\.js"/g, 'src="./index.js"')
+      .replace(/src="(?:\.\/)?script\.js"/g, 'src="./index.js"')
+      .replace(/<script src="https:\/\/cdn\.tailwindcss\.com"><\/script>\s*/g, "")
+  );
 }
 
 function sanitizeTypeScriptModule(code: string) {

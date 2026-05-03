@@ -126,9 +126,11 @@ export function PublicChallengeClient({ token }: { token: string }) {
           const model = ed.getModel();
           if (model && model.getValue() !== activeCode) {
             isRemoteUpdate.current = true;
+            const savedSelection = ed.getSelection();
             const fullRange = model.getFullModelRange();
             ed.executeEdits("remote-sync", [{ range: fullRange, text: activeCode, forceMoveMarkers: false }]);
             isRemoteUpdate.current = false;
+            if (savedSelection) ed.setSelection(savedSelection);
           }
         }
         setWorkspace(updatedWorkspace);
@@ -141,9 +143,11 @@ export function PublicChallengeClient({ token }: { token: string }) {
             const model = ed.getModel();
             if (model && model.getValue() !== code) {
               isRemoteUpdate.current = true;
+              const savedSelection = ed.getSelection();
               const fullRange = model.getFullModelRange();
               ed.executeEdits("remote-sync", [{ range: fullRange, text: code, forceMoveMarkers: false }]);
               isRemoteUpdate.current = false;
+              if (savedSelection) ed.setSelection(savedSelection);
             }
           }
           setWorkspace(updateWorkspaceFile(workspace, activeFile.path, code));
