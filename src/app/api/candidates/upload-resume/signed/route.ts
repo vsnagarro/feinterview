@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     // createSignedUploadUrl handles correct URL construction — no placeholder needed
     const { data: signData, error: signError } = await supabase.storage.from(bucket).createSignedUploadUrl(filename, { upsert: true });
 
-    if (signError || !signData) {
+    if (signError || !signData || !signData.signedUrl) {
       return NextResponse.json(
         {
           error: "Signed upload URL unavailable",

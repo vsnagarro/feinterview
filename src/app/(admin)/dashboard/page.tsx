@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDateShort } from "@/lib/utils";
+import type { InterviewProfile, Difficulty } from "@/types/app";
+
+const diffVariant: Record<string, "default" | "success" | "warning" | "info"> = {
+  junior: "success",
+  mid: "info",
+  senior: "warning",
+};
 
 interface SessionRow {
   id: string;
@@ -25,14 +32,17 @@ export default async function DashboardPage() {
   let snippetCount = 0;
   let sessionCount = 0;
   let candidateCount = 0;
+  let profileCount = 0;
   let recentSessions: SessionRow[] = [];
+  let recentProfiles: InterviewProfile[] = [];
 
   try {
-    const [qRes, snRes, seRes, candRes, sessionsRes] = await Promise.all([
+    const [qRes, snRes, seRes, candRes, profRes, sessionsRes, profilesRes] = await Promise.all([
       supabase.from("questions").select("*", { count: "exact", head: true }),
       supabase.from("code_snippets").select("*", { count: "exact", head: true }),
       supabase.from("sessions").select("*", { count: "exact", head: true }),
       supabase.from("candidates").select("*", { count: "exact", head: true }),
+      supabase.from("interview_profiles").select("*", { count: "exact", head: true }),
       supabase
         .from("sessions")
         .select(
@@ -43,13 +53,16 @@ export default async function DashboardPage() {
         )
         .order("created_at", { ascending: false })
         .limit(50),
+      supabase.from("interview_profiles").select("*").order("created_at", { ascending: false }).limit(5),
     ]);
 
     questionCount = qRes.count ?? 0;
     snippetCount = snRes.count ?? 0;
     sessionCount = seRes.count ?? 0;
     candidateCount = candRes.count ?? 0;
+    profileCount = profRes.count ?? 0;
     recentSessions = (sessionsRes.data ?? []) as unknown as SessionRow[];
+    recentProfiles = (profilesRes.data ?? []) as InterviewProfile[];
   } catch (err) {
     console.error("Dashboard data load error:", err);
     return (
@@ -75,10 +88,11 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-5 gap-4 mb-8">
         {[
           { label: "Candidates", count: candidateCount, href: "/sessions" },
           { label: "Sessions", count: sessionCount, href: "/sessions" },
+          { label: "Profiles", count: profileCount, href: "/profiles" },
           { label: "Questions", count: questionCount, href: "/library" },
           { label: "Code Snippets", count: snippetCount, href: "/library?tab=snippets" },
         ].map((stat) => (
@@ -88,6 +102,44 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Profiles quick-access */}
+      {recentProfiles.length > 0 && (
+        <div className="card overflow-hidden mb-6">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-900">Interview Profiles</h2>
+            <Link href="/profiles" className="text-sm text-sky-600 hover:underline">
+              Manage →
+            </Link>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+            {recentProfiles.map((p) => (
+              <Link key={p.id} href={`/sessions/new?profileId=${p.id}`} className="p-4 hover:bg-slate-50 transition-colors group">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 text-sm truncate">{p.title}</p>
+                    {p.position && <p className="text-xs text-slate-500 truncate">{p.position}</p>}
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={diffVariant[p.level as Difficulty] ?? "default"}>{p.level}</Badge>
+                      <span className="text-xs text-slate-400">
+                        {p.question_count}Q / {p.challenge_count}C
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-sky-600 text-xs shrink-0 group-hover:underline mt-0.5">Start →</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          {profileCount > recentProfiles.length && (
+            <div className="p-3 border-t border-slate-100 text-center">
+              <Link href="/profiles" className="text-sm text-sky-600 hover:underline">
+                View all {profileCount} profiles →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Sessions table */}
       <div className="card overflow-hidden">
@@ -115,15 +167,7 @@ export default async function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {recentSessions.map((session) => {
-                  const submissionCount = (session.code_challenges ?? []).reduce(
-                    (acc, ch) =>
-                      acc +
-                      (ch.challenge_links ?? []).reduce(
-                        (a, l) => a + (l.challenge_submissions?.length ?? 0),
-                        0,
-                      ),
-                    0,
-                  );
+                  const submissionCount = (session.code_challenges ?? []).reduce((acc, ch) => acc + (ch.challenge_links ?? []).reduce((a, l) => a + (l.challenge_submissions?.length ?? 0), 0), 0);
                   const challengeCount = session.code_challenges?.length ?? 0;
                   const hasResume = !!session.candidates?.resume_url;
                   const hasFeedback = !!session.feedback;
@@ -134,30 +178,18 @@ export default async function DashboardPage() {
                         <Link href={`/sessions/${session.id}`} className="font-medium text-slate-900 hover:text-sky-600">
                           {session.candidates?.name ?? "—"}
                         </Link>
-                        {session.candidates?.email && (
-                          <p className="text-xs text-slate-400">{session.candidates.email}</p>
-                        )}
+                        {session.candidates?.email && <p className="text-xs text-slate-400">{session.candidates.email}</p>}
                       </td>
                       <td className="p-3 text-slate-600">{session.job_descriptions?.title ?? "—"}</td>
                       <td className="p-3 text-slate-500 whitespace-nowrap">{formatDateShort(session.created_at)}</td>
                       <td className="p-3">
-                        <Badge variant={session.status === "active" ? "success" : session.status === "completed" ? "info" : "default"}>
-                          {session.status}
-                        </Badge>
+                        <Badge variant={session.status === "active" ? "success" : session.status === "completed" ? "info" : "default"}>{session.status}</Badge>
                       </td>
                       <td className="p-3 text-center">{challengeCount > 0 ? <span className="font-medium">{challengeCount}</span> : <span className="text-slate-300">—</span>}</td>
                       <td className="p-3 text-center">
-                        {submissionCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
-                            ✓ {submissionCount}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
+                        {submissionCount > 0 ? <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">✓ {submissionCount}</span> : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="p-3 text-center">
-                        {hasFeedback ? <span className="text-emerald-600 text-xs">✓ Added</span> : <span className="text-slate-300 text-xs">—</span>}
-                      </td>
+                      <td className="p-3 text-center">{hasFeedback ? <span className="text-emerald-600 text-xs">✓ Added</span> : <span className="text-slate-300 text-xs">—</span>}</td>
                       <td className="p-3 text-center">
                         {hasResume ? (
                           <Link href={`/sessions/${session.id}`} className="text-sky-600 text-xs hover:underline">

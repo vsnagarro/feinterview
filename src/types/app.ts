@@ -2,6 +2,25 @@ export type Difficulty = "junior" | "mid" | "senior";
 export type QuestionSource = "manual" | "ai_generated";
 export type SessionStatus = "pending" | "active" | "submitted" | "completed" | "expired";
 export type WorkspaceTemplate = "vanilla" | "react" | "tailwind";
+export type GenerateType = "both" | "questions" | "challenges";
+
+export interface InterviewProfile {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  position: string;
+  level: string;
+  jd_text: string | null;
+  question_count: number;
+  challenge_count: number;
+  trickiness: number;
+  difficulty: Difficulty;
+  generate_type: GenerateType;
+  challenge_guideline: string | null;
+  extra_checks: string | null;
+  notes: string | null;
+}
 
 export const SUPPORTED_LANGUAGES = ["javascript", "typescript", "python", "css", "html", "java", "go", "rust", "sql"] as const;
 

@@ -8,12 +8,12 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
-import type { Difficulty, GeneratedQuestion, GeneratedSnippet } from "@/types/app";
+import type { Difficulty, GeneratedQuestion, GeneratedSnippet, InterviewProfile } from "@/types/app";
 
 type Step = "candidate" | "jd" | "review" | "generating";
 type NavigableStep = "candidate" | "jd" | "review";
 
-export function SessionForm() {
+export function SessionForm({ profile }: { profile?: InterviewProfile }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("candidate");
   const [loading, setLoading] = useState(false);
@@ -26,18 +26,45 @@ export function SessionForm() {
     notes: "",
   });
   const [jd, setJd] = useState({
-    title: "",
-    description: "",
+    title: profile?.position ?? "",
+    description: profile?.jd_text ?? "",
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [difficulty, setDifficulty] = useState<Difficulty>("mid");
-  const [questionCount, setQuestionCount] = useState("10");
-  const [generateType, setGenerateType] = useState<"both" | "questions" | "challenges">("both");
-  const [challengeGuideline, setChallengeGuideline] = useState<string>("");
-  const [extraChecks, setExtraChecks] = useState<string>("");
-  const [targetLevel, setTargetLevel] = useState<string>("mid");
-  const [trickiness, setTrickiness] = useState<number | "">(3);
-  const challengeCount = 10;
+  const [resumeError, setResumeError] = useState<string | null>(null);
+
+  const RESUME_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  const RESUME_ALLOWED_TYPES = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+  const RESUME_ALLOWED_EXT = /\.(pdf|doc|docx)$/i;
+
+  function handleResumeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setResumeError(null);
+    if (!file) {
+      setResumeFile(null);
+      return;
+    }
+    if (!RESUME_ALLOWED_EXT.test(file.name) && !RESUME_ALLOWED_TYPES.includes(file.type)) {
+      setResumeError("Only PDF, DOC, or DOCX files are allowed.");
+      e.target.value = "";
+      setResumeFile(null);
+      return;
+    }
+    if (file.size > RESUME_MAX_BYTES) {
+      setResumeError("File must be under 5 MB.");
+      e.target.value = "";
+      setResumeFile(null);
+      return;
+    }
+    setResumeFile(file);
+  }
+  const [difficulty, setDifficulty] = useState<Difficulty>((profile?.difficulty as Difficulty) ?? "mid");
+  const [questionCount, setQuestionCount] = useState(String(profile?.question_count ?? 10));
+  const [challengeCount, setChallengeCount] = useState(String(profile?.challenge_count ?? 3));
+  const [generateType, setGenerateType] = useState<"both" | "questions" | "challenges">(profile?.generate_type ?? "both");
+  const [challengeGuideline, setChallengeGuideline] = useState<string>(profile?.challenge_guideline ?? "");
+  const [extraChecks, setExtraChecks] = useState<string>(profile?.extra_checks ?? "");
+  const [targetLevel, setTargetLevel] = useState<string>(profile?.level ?? "mid");
+  const [trickiness, setTrickiness] = useState<number | "">(profile?.trickiness ?? 3);
   const [result, setResult] = useState<{
     questions: GeneratedQuestion[];
     snippets: GeneratedSnippet[];
@@ -104,6 +131,7 @@ export function SessionForm() {
           targetLevel: targetLevel || undefined,
           trickiness: trickiness !== "" ? Number(trickiness) : undefined,
           difficulty,
+          profileId: profile?.id ?? undefined,
         }),
       });
 
@@ -136,7 +164,7 @@ export function SessionForm() {
           jobDescription: jd.description || `${jd.title} role`,
           difficulty,
           count: Number(questionCount),
-          challengeCount,
+          challengeCount: Number(challengeCount),
           generateType: generateType,
           challengeGuideline: challengeGuideline || undefined,
         }),
@@ -255,6 +283,11 @@ export function SessionForm() {
 
     const { uploadUrl, publicUrl, filename } = await signRes.json();
 
+    // Guard: ensure the signed URL is a valid absolute URL before fetching
+    if (!uploadUrl || typeof uploadUrl !== "string" || !uploadUrl.startsWith("http")) {
+      throw new Error("Invalid signed upload URL returned from server");
+    }
+
     // 2. PUT the file directly to the signed URL
     const putRes = await fetch(uploadUrl, {
       method: "PUT",
@@ -323,7 +356,9 @@ export function SessionForm() {
           <Textarea label="Notes" value={candidate.notes} onChange={(e) => setCandidate({ ...candidate, notes: e.target.value })} rows={2} placeholder="Any notes about the candidate…" />
           <div>
             <label className="text-sm font-medium block mb-1">Upload resume (optional)</label>
-            <input title="Upload resume" type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            <input title="Upload resume" type="file" accept=".pdf,.doc,.docx" onChange={handleResumeChange} className="text-sm" />
+            {resumeError && <p className="text-xs text-red-500 mt-1">{resumeError}</p>}
+            <p className="text-xs text-slate-400 mt-1">PDF, DOC, or DOCX — max 5 MB</p>
           </div>
           <div className="flex justify-end">
             <Button onClick={() => setStep("jd")} disabled={!candidate.name.trim()}>
@@ -358,6 +393,8 @@ export function SessionForm() {
       {step === "review" && (
         <div className="card p-6 space-y-5">
           <h2 className="font-semibold text-slate-900">Review & Generate</h2>
+
+          {profile && <div className="text-xs bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 text-sky-700 font-medium">Using profile: {profile.title}</div>}
 
           <div className="bg-slate-50 rounded-lg p-4 space-y-2">
             <p className="text-sm">
@@ -396,17 +433,11 @@ export function SessionForm() {
               label="Number of questions"
               value={questionCount}
               onChange={(e) => setQuestionCount(e.target.value)}
-              options={[
-                { value: "5", label: "5 questions" },
-                { value: "10", label: "10 questions" },
-                { value: "15", label: "15 questions" },
-                { value: "20", label: "20 questions" },
-                { value: "30", label: "30 questions" },
-              ]}
+              options={["5", "8", "10", "12", "15", "20", "25", "30"].map((v) => ({ value: v, label: `${v} questions` }))}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-3">
+          <div className="grid grid-cols-3 gap-4 mt-3">
             <div>
               <label className="text-sm font-medium block mb-1">Generate</label>
               <Select
@@ -420,8 +451,16 @@ export function SessionForm() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium block mb-1">Code challenges</label>
+              <Select
+                value={challengeCount}
+                onChange={(e) => setChallengeCount(e.target.value)}
+                options={["1", "2", "3", "5", "7", "10"].map((v) => ({ value: v, label: `${v} challenge${Number(v) !== 1 ? "s" : ""}` }))}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium block mb-1">Challenge guideline (optional)</label>
-              <Input value={challengeGuideline} onChange={(e) => setChallengeGuideline(e.target.value)} placeholder="E.g. focus on algorithms, or performance optimizations" />
+              <Input value={challengeGuideline} onChange={(e) => setChallengeGuideline(e.target.value)} placeholder="E.g. algorithms, performance" />
             </div>
           </div>
 

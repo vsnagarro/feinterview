@@ -6,6 +6,57 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "@/components/ui/Toast";
 
+const IMG_MAX_BYTES = 5 * 1024 * 1024; // 5 MB client-side limit before compression
+const IMG_MAX_DIM = 1920; // max width or height
+const IMG_ALLOWED = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+/** Compress an image File via canvas to JPEG at given quality, capped at IMG_MAX_DIM */
+async function compressImage(file: File, quality = 0.82): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > IMG_MAX_DIM || height > IMG_MAX_DIM) {
+        if (width >= height) {
+          height = Math.round((height * IMG_MAX_DIM) / width);
+          width = IMG_MAX_DIM;
+        } else {
+          width = Math.round((width * IMG_MAX_DIM) / height);
+          height = IMG_MAX_DIM;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const ext = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+          resolve(new File([blob], ext, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        quality,
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Image load failed"));
+    };
+    img.src = url;
+  });
+}
+
 interface SessionFeedbackProps {
   sessionId: string;
   initialFeedback: string | null;
@@ -45,15 +96,30 @@ export function SessionFeedback({ sessionId, initialFeedback, screenshotPath, sc
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate type
+    if (!IMG_ALLOWED.includes(file.type)) {
+      toast("Only PNG, JPG, or WEBP images are allowed", "error");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    // Validate size (before compression)
+    if (file.size > IMG_MAX_BYTES) {
+      toast("Image must be under 5 MB", "error");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setUploadingScreenshot(true);
     try {
+      // Compress before upload
+      const compressed = await compressImage(file).catch(() => file);
+
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", compressed);
       const res = await fetch(`/api/sessions/${sessionId}/screenshot`, { method: "POST", body: form });
       if (!res.ok) throw new Error("Upload failed");
 
-      // Show preview from local blob URL while page re-renders
-      setCurrentScreenshotUrl(URL.createObjectURL(file));
+      setCurrentScreenshotUrl(URL.createObjectURL(compressed));
       setHasScreenshot(true);
       toast("Screenshot uploaded", "success");
       router.refresh();

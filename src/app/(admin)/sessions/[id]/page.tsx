@@ -76,7 +76,10 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
   const { data: links } = challengeIds.length > 0 ? await supabase.from("challenge_links").select("*").in("challenge_id", challengeIds).order("created_at", { ascending: false }) : { data: [] };
   const challengeLinks = (links as (ChallengeLink & { challenge_id?: string })[] | null) ?? [];
   const linkIds = challengeLinks.map((l) => l.id);
-  const { data: rawSubmissions } = linkIds.length > 0 ? await supabase.from("challenge_submissions").select("id, created_at, language, code, is_snapshot, link_id").in("link_id", linkIds).order("created_at", { ascending: false }) : { data: [] };
+  const { data: rawSubmissions } =
+    linkIds.length > 0
+      ? await supabase.from("challenge_submissions").select("id, created_at, language, code, is_snapshot, link_id").in("link_id", linkIds).order("created_at", { ascending: false })
+      : { data: [] };
   const submissions = (rawSubmissions ?? []) as Array<{ id: string; created_at: string; language: string; code: string; is_snapshot: boolean; link_id: string }>;
 
   // Resume signed URL (private bucket)
@@ -264,12 +267,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
       {/* Feedback & Screenshot */}
       <div className="card p-5">
         <h2 className="font-semibold text-slate-900 mb-4">Feedback &amp; Notes</h2>
-        <SessionFeedback
-          sessionId={id}
-          initialFeedback={typedSession.feedback}
-          screenshotPath={typedSession.screenshot_url}
-          screenshotSignedUrl={screenshotSignedUrl}
-        />
+        <SessionFeedback sessionId={id} initialFeedback={typedSession.feedback} screenshotPath={typedSession.screenshot_url} screenshotSignedUrl={screenshotSignedUrl} />
       </div>
     </div>
   );

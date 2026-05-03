@@ -29,11 +29,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const file = formData.get("file") as File | null;
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
-    const ext = file.name.split(".").pop() ?? "png";
+    // Validate MIME type — only accept standard images
+    const allowedMime = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
+    const mimeType = file.type.split(";")[0].trim();
+    if (!allowedMime.includes(mimeType)) {
+      return NextResponse.json({ error: `Invalid file type: ${mimeType}. Only PNG, JPG, WEBP, or GIF allowed.` }, { status: 400 });
+    }
+    // 10 MB server-side cap
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "File too large. Max 10 MB." }, { status: 400 });
+    }
+
+    const ext = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1];
     const filename = `${sessionId}/${randomBytes(6).toString("hex")}.${ext}`;
 
     const buffer = await file.arrayBuffer();
-    const { error: uploadError } = await service.storage.from(bucket).upload(filename, Buffer.from(buffer), { contentType: file.type || "image/png", upsert: true });
+    const { error: uploadError } = await service.storage.from(bucket).upload(filename, Buffer.from(buffer), { contentType: mimeType, upsert: true });
 
     if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
 
