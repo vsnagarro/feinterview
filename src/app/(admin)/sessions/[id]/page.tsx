@@ -35,6 +35,16 @@ interface SessionQuestion {
   id: string;
   question: string;
   answer: string;
+  explanation: string | null;
+  metadata: {
+    explanation?: string | null;
+    simpleExplanation?: string | null;
+    highlights?: string[] | null;
+    codeExamples?: { language: string; code: string }[] | null;
+    // legacy field names
+    topicExplanation?: string | null;
+    analogy?: string | null;
+  } | null;
   order_index: number;
   asked: boolean;
   rating: number | null;
@@ -198,7 +208,61 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                   <p className="text-sm text-slate-900 flex-1">{q.question}</p>
                   <span className="text-slate-400 text-xs group-open:rotate-180 transition-transform shrink-0">▼</span>
                 </summary>
-                <div className="px-11 pb-4 text-sm text-slate-600 whitespace-pre-wrap">{q.answer}</div>
+                <div className="px-11 pb-5 space-y-3">
+                  {/* 1. Concise answer */}
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Answer</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{q.answer}</p>
+                  </div>
+
+                  {/* 2. Detailed explanation */}
+                  {(q.metadata?.explanation ?? q.explanation ?? q.metadata?.topicExplanation) && (
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-slate-600 mb-1">Detailed Explanation</p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{q.metadata?.explanation ?? q.explanation ?? q.metadata?.topicExplanation}</p>
+                    </div>
+                  )}
+
+                  {/* 3. Simple terms + analogy */}
+                  {(q.metadata?.simpleExplanation ?? q.metadata?.analogy) && (
+                    <div className="bg-sky-50 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-sky-700 mb-1">Simple Terms &amp; Analogy</p>
+                      <p className="text-sm text-sky-900 whitespace-pre-wrap">{q.metadata?.simpleExplanation ?? q.metadata?.analogy}</p>
+                    </div>
+                  )}
+
+                  {/* 4. Code examples */}
+                  {q.metadata?.codeExamples && q.metadata.codeExamples.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-600 mb-2">Code Examples</p>
+                      <div className="space-y-2">
+                        {q.metadata.codeExamples.map((ex, i) => (
+                          <div key={i} className="bg-slate-900 rounded-lg p-3">
+                            <p className="text-xs text-slate-400 font-mono mb-2">{ex.language}</p>
+                            <pre className="text-xs text-slate-100 overflow-x-auto">
+                              <code>{ex.code}</code>
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. Key takeaways */}
+                  {q.metadata?.highlights && q.metadata.highlights.length > 0 && (
+                    <div className="bg-amber-50 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-amber-700 mb-2">Key Takeaways</p>
+                      <ul className="space-y-1">
+                        {q.metadata.highlights.map((point, i) => (
+                          <li key={i} className="text-sm text-amber-900 flex gap-2">
+                            <span className="text-amber-500 shrink-0">•</span>
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </details>
             ))}
           </div>

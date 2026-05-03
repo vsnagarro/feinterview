@@ -16,6 +16,7 @@ async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promis
   simple_explanation: string;
   examples: string[];
   code_examples: Array<{ language: string; code: string }>;
+  highlights: string[];
 }> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY environment variable is not set");
@@ -23,10 +24,11 @@ async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promis
 
   const gemini = createGeminiAnthropicLike();
 
-  const prompt = `You are an expert technical educator. Given a technical question and its answer, create:
-1. A simple, beginner-friendly explanation (1-2 sentences)
-2. 2-3 analogous real-world examples
-3. 2 code examples in different languages (JavaScript and Python)
+  const prompt = `You are an expert technical educator. Given a technical interview question and its answer, produce four structured sections:
+1. A plain-language explanation with a concrete real-world analogy (2-3 sentences) — stored in simple_explanation
+2. 2-3 analogous real-world examples that make the concept intuitive — stored in examples
+3. 2 runnable code examples in JavaScript and TypeScript — stored in code_examples
+4. 5-7 key takeaways a strong candidate must know, each as a short bullet-point string — stored in highlights
 
 Question: ${question.text}
 Current Answer: ${question.answer}
@@ -34,19 +36,21 @@ ${question.explanation ? `Current Explanation: ${question.explanation}` : ""}
 
 Respond in JSON format with these exact keys:
 {
-  "simple_explanation": "...",
-  "examples": ["example1", "example2", "example3"],
+  "simple_explanation": "plain-language explanation followed by a real-world analogy (2-3 sentences)",
+  "examples": ["concrete analogous example 1", "example 2", "example 3"],
   "code_examples": [
     {"language": "javascript", "code": "..."},
-    {"language": "python", "code": "..."}
-  ]
+    {"language": "typescript", "code": "..."}
+  ],
+  "highlights": ["key takeaway 1", "key takeaway 2", "...", "key takeaway 5"]
 }
 
 Important:
 - Keep simple_explanation concise and in plain English
-- Make examples relatable and concrete
-- Ensure code examples are syntactically correct and runnable
-- Code examples should demonstrate the answer/concept clearly`;
+- Make examples relatable, concrete, and directly analogous to the concept
+- Ensure code examples are syntactically correct, runnable, and demonstrate the concept clearly
+- Highlights should be actionable, memorable points (not just restatements of the answer)
+- All strings must be properly escaped JSON`;
 
   const message = await gemini.messages.create({
     max_tokens: 1024,
@@ -120,6 +124,7 @@ export async function POST(req: NextRequest) {
             simple_explanation: augmented.simple_explanation,
             examples: augmented.examples,
             code_examples: augmented.code_examples,
+            highlights: augmented.highlights,
           })
           .eq("id", question.id)
           .select();

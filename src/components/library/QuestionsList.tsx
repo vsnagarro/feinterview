@@ -331,7 +331,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
               <div className="flex items-center gap-2 shrink-0">
                 {q.category && <span className="text-xs text-slate-400">{q.category}</span>}
                 <Badge variant={levelVariant[q.level as keyof typeof levelVariant] ?? "default"}>{q.level}</Badge>
-                {(q as unknown as { simple_explanation?: string }).simple_explanation && <Badge variant="success">✓ Augmented</Badge>}
+                {q.simple_explanation && <Badge variant="success">✓ Augmented</Badge>}
                 <button onClick={() => handleDeleteQuestion(q.id)} className="text-slate-400 hover:text-red-500 text-xs">
                   🗑️
                 </button>
@@ -346,18 +346,18 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   <strong>Answer:</strong> {q.answer}
                 </p>
 
-                {(q as unknown as { simple_explanation?: string }) && (
+                {q.simple_explanation && (
                   <div className="mt-4 bg-blue-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-blue-900">Simple Explanation:</p>
-                    <p className="text-xs text-blue-800 mt-1">{(q as unknown as { simple_explanation?: string }).simple_explanation}</p>
+                    <p className="text-xs font-semibold text-blue-900">Simple Terms &amp; Analogy:</p>
+                    <p className="text-xs text-blue-800 mt-1">{q.simple_explanation}</p>
                   </div>
                 )}
 
-                {(q as unknown as { examples?: string[] })?.examples && (q as unknown as { examples?: string[] }).examples!.length > 0 && (
+                {q.examples && q.examples.length > 0 && (
                   <div className="mt-3 bg-green-50 p-3 rounded">
-                    <p className="text-xs font-semibold text-green-900">Examples:</p>
+                    <p className="text-xs font-semibold text-green-900">Analogous Examples:</p>
                     <ul className="text-xs text-green-800 mt-2 space-y-1">
-                      {(q as unknown as { examples?: string[] }).examples!.map((ex: string, i: number) => (
+                      {q.examples.map((ex: string, i: number) => (
                         <li key={i} className="list-disc list-inside">
                           {ex}
                         </li>
@@ -366,22 +366,35 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   </div>
                 )}
 
-                {(q as unknown as { code_examples?: Array<{ language: string; code: string }> })?.code_examples &&
-                  (q as unknown as { code_examples?: Array<{ language: string; code: string }> }).code_examples!.length > 0 && (
-                    <div className="mt-3 bg-purple-50 p-3 rounded">
-                      <p className="text-xs font-semibold text-purple-900">Code Examples:</p>
-                      <div className="mt-2 space-y-2">
-                        {(q as unknown as { code_examples?: Array<{ language: string; code: string }> }).code_examples!.map((ex: { language: string; code: string }, i: number) => (
-                          <div key={i} className="bg-slate-900 p-2 rounded text-xs">
-                            <p className="text-purple-300 font-semibold mb-1">{ex.language}</p>
-                            <pre className="text-slate-300 overflow-x-auto text-[10px]">
-                              <code>{ex.code}</code>
-                            </pre>
-                          </div>
-                        ))}
-                      </div>
+                {q.code_examples && q.code_examples.length > 0 && (
+                  <div className="mt-3 bg-purple-50 p-3 rounded">
+                    <p className="text-xs font-semibold text-purple-900">Code Examples:</p>
+                    <div className="mt-2 space-y-2">
+                      {q.code_examples.map((ex: { language: string; code: string }, i: number) => (
+                        <div key={i} className="bg-slate-900 p-2 rounded text-xs">
+                          <p className="text-purple-300 font-semibold mb-1">{ex.language}</p>
+                          <pre className="text-slate-300 overflow-x-auto text-[10px]">
+                            <code>{ex.code}</code>
+                          </pre>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
+
+                {q.highlights && q.highlights.length > 0 && (
+                  <div className="mt-3 bg-amber-50 p-3 rounded">
+                    <p className="text-xs font-semibold text-amber-700">Key Takeaways:</p>
+                    <ul className="mt-2 space-y-1">
+                      {q.highlights.map((point: string, i: number) => (
+                        <li key={i} className="text-xs text-amber-900 flex gap-1.5">
+                          <span className="text-amber-500 shrink-0">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {q.languages?.length > 0 && (
                   <div className="flex gap-1 mt-3 flex-wrap">
@@ -391,7 +404,7 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                   </div>
                 )}
 
-                {!(q as unknown as { simple_explanation?: string })?.simple_explanation && (
+                {!q.simple_explanation && (
                   <Button size="sm" variant="secondary" loading={augmenting} onClick={() => handleAugmentQuestion(q.id)} className="mt-4">
                     ✨ Augment with AI
                   </Button>

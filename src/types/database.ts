@@ -77,6 +77,7 @@ export interface Question {
   simple_explanation?: string | null;
   examples?: string[] | null;
   code_examples?: Array<{ language: string; code: string }> | null;
+  highlights?: string[] | null;
 }
 
 export interface CodeSnippet {

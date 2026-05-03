@@ -54,15 +54,17 @@ export const WORKSPACE_TEMPLATE_LABELS: Record<WorkspaceTemplate, string> = {
 export interface GeneratedQuestion {
   question: string;
   answer: string; // concise answer for candidate view
-  explanation?: string; // short explanation
   topic?: string;
   tags: string[];
   difficulty: Difficulty;
-  // Rich answer components for admin visibility
-  topicExplanation?: string; // simple explanation of the topic
-  highlights?: string[]; // bullet points
-  analogy?: string; // analogous example
+  // 4-section rich answer for admin view
+  explanation?: string; // detailed technical explanation
+  simpleExplanation?: string; // plain-language + real-world analogy
+  highlights?: string[]; // key takeaways (5-7 bullet points)
   codeExamples?: { language: string; code: string }[];
+  // legacy field names (backwards compat with existing session data)
+  topicExplanation?: string;
+  analogy?: string;
 }
 
 export interface GeneratedSnippet {

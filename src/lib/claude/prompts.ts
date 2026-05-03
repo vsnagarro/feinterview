@@ -15,10 +15,10 @@ You must respond with a valid JSON object matching this exact schema:
       "topic": "string — topic name",
       "tags": ["string", ...],
       "difficulty": "junior" | "mid" | "senior",
-      "topicExplanation": "string — explain the topic in simple terms (for admin),",
-      "highlights": ["string", ...],
-      "analogy": "string — short analogy",
-      "codeExamples": [{ "language": "javascript", "code": "string" }]
+      "explanation": "string — detailed technical explanation of the solution/concept (3-5 sentences, with depth appropriate to difficulty)",
+      "simpleExplanation": "string — plain-language explanation (2-3 sentences) followed by a concrete real-world analogy that makes the concept click",
+      "highlights": ["string — one key takeaway per item (5-7 items total)"],
+      "codeExamples": [{ "language": "javascript", "code": "string" }, { "language": "typescript", "code": "string" }]
     }
   ],
   "snippets": [
@@ -106,11 +106,11 @@ ${params.jobDescription}
 TARGET LEVEL: ${params.difficulty || params.targetLevel || "Not specified"}
 
 Generate ${params.count ?? 10} questions and ${params.challengeCount ?? 10} code snippets that can be used as coding challenges. For each QUESTION include:
-- a concise answer that would be shown to the candidate (2-4 sentences),
-- an expanded topicExplanation (simple, plain-language explanation),
-- highlights as a short bullet list of key points,
-- an analogy sentence that relates the concept to a simple real-world example,
-- optional codeExamples with language and code.
+- **answer**: concise answer shown to the candidate (2-4 sentences)
+- **explanation**: detailed technical explanation of the solution/concept with depth matching the difficulty level (3-5 sentences)
+- **simpleExplanation**: plain-language explanation followed by a concrete real-world analogy that makes the concept intuitive (2-3 sentences)
+- **codeExamples**: 2 runnable code examples (JavaScript and TypeScript) demonstrating the concept
+- **highlights**: 5-7 bullet-point key takeaways a strong candidate must know
 
 For each SNIPPET include starter code, a short explanation, and additionally return the full solution and solutionExplanation — these solution fields are admin-only and must NOT be shown to candidates. Respect the generateType parameter if provided: questions, challenges, or both. If challengeGuideline is provided, use it to shape the generated code challenge idea.
 
