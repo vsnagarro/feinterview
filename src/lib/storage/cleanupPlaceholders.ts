@@ -1,9 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function cleanupPlaceholders(
-  supabase: SupabaseClient,
-  opts: { bucket?: string; olderThanMinutes?: number } = {}
-): Promise<string[]> {
+export async function cleanupPlaceholders(supabase: SupabaseClient, opts: { bucket?: string; olderThanMinutes?: number } = {}): Promise<string[]> {
   const bucket = opts.bucket ?? "resumes";
   const olderThanMinutes = opts.olderThanMinutes ?? 10;
 

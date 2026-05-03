@@ -44,6 +44,7 @@ export function SessionForm() {
     sessionId: string;
   } | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
 
   async function handleCreateSession() {
     setLoading(true);
@@ -76,6 +77,7 @@ export function SessionForm() {
 
       if (!res.ok) throw new Error("Failed to create session");
       const { session } = await res.json();
+      setCreatedSessionId(session.id);
 
       // If we have a resume file, upload it now and attach to the created candidate
       try {
@@ -164,6 +166,15 @@ export function SessionForm() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast(msg, "error");
+      // Clean up the incomplete session if it was created before the failure
+      if (createdSessionId) {
+        try {
+          await fetch(`/api/sessions/${createdSessionId}`, { method: "DELETE" });
+        } catch {
+          // best-effort — log only
+          console.warn("Could not delete incomplete session", createdSessionId);
+        }
+      }
       setStep("review");
     } finally {
       setLoading(false);

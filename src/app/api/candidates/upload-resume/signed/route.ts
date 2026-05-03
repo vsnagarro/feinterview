@@ -94,11 +94,14 @@ export async function POST(request: Request) {
     }
 
     const signJson = await signRes.json().catch(() => ({}));
-    const uploadUrl = signJson?.signedURL ?? signJson?.signedUrl ?? signJson?.signed_url ?? signJson?.url ?? null;
+    const rawUploadUrl = signJson?.signedURL ?? signJson?.signedUrl ?? signJson?.signed_url ?? signJson?.url ?? null;
 
-    if (!uploadUrl) {
+    if (!rawUploadUrl) {
       return NextResponse.json({ error: "Signed upload URL not returned by Supabase" }, { status: 500 });
     }
+
+    // Supabase returns a relative path like /storage/v1/object/sign/... — make it absolute
+    const uploadUrl = rawUploadUrl.startsWith("http") ? rawUploadUrl : `${supabaseUrl}${rawUploadUrl.startsWith("/") ? "" : "/"}${rawUploadUrl}`;
 
     return NextResponse.json({ uploadUrl, filename }, { status: 200 });
   } catch (err) {
