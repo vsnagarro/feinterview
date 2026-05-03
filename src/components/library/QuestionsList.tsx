@@ -382,7 +382,9 @@ export function QuestionsList({ initialQuestions }: QuestionsListProps) {
                       {q.code_examples.map((ex: { language: string; code: string }, i: number) => (
                         <div key={i} className="bg-slate-900 rounded-lg p-3">
                           <p className="text-xs text-slate-400 font-mono mb-2">{ex.language}</p>
-                          <pre className="text-xs text-slate-100 overflow-x-auto"><code>{ex.code}</code></pre>
+                          <pre className="text-xs text-slate-100 overflow-x-auto">
+                            <code>{ex.code}</code>
+                          </pre>
                         </div>
                       ))}
                     </div>

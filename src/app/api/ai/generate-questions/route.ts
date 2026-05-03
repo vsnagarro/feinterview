@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getAIClient } from "@/lib/ai/client";
 import { buildGeneratePrompt } from "@/lib/claude/prompts";
 import { extractJSON } from "@/lib/utils";
+import { validateGeneratedQuestion, validateGeneratedSnippet, formatQuestionMetadata } from "@/lib/ai/questionSchema";
 import type { GenerateQuestionsPayload, GeneratedQuestion, GeneratedSnippet } from "@/types/app";
 
 function normalizeDifficulty(value: string | undefined, fallback: GenerateQuestionsPayload["difficulty"]) {
@@ -133,7 +134,12 @@ export async function POST(request: Request) {
 
           let parsed: { questions: GeneratedQuestion[]; snippets: GeneratedSnippet[] };
           try {
-            parsed = JSON.parse(repairJSONString(extractJSON(rawText)));
+            const raw = JSON.parse(repairJSONString(extractJSON(rawText)));
+            // Validate each item through the schema; drop invalid ones
+            parsed = {
+              questions: (raw.questions ?? []).map(validateGeneratedQuestion).filter((q: GeneratedQuestion | null): q is GeneratedQuestion => q !== null),
+              snippets: (raw.snippets ?? []).map(validateGeneratedSnippet).filter((s: GeneratedSnippet | null): s is GeneratedSnippet => s !== null),
+            };
           } catch {
             controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: `Failed to parse AI response in batch ${batchIndex + 1}` })}\n\n`));
             controller.close();
@@ -174,12 +180,7 @@ export async function POST(request: Request) {
           question: q.question,
           answer: q.answer,
           explanation: q.explanation ?? q.topicExplanation ?? null,
-          metadata: {
-            explanation: q.explanation ?? q.topicExplanation ?? null,
-            simpleExplanation: q.simpleExplanation ?? q.analogy ?? null,
-            highlights: q.highlights ?? null,
-            codeExamples: q.codeExamples ?? null,
-          },
+          metadata: formatQuestionMetadata(q),
           order_index: i,
         }));
 

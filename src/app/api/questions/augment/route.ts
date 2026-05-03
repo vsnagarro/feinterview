@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createGeminiAnthropicLike } from "@/lib/ai/geminiClient";
+import { validateAugmentedFields } from "@/lib/ai/questionSchema";
+import type { AugmentedFields } from "@/lib/ai/questionSchema";
 
 interface QuestionWithAugmentation {
   id: string;
@@ -12,13 +14,7 @@ interface QuestionWithAugmentation {
   code_examples?: Array<{ language: string; code: string }> | null;
 }
 
-async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promise<{
-  detailed_explanation: string;
-  simple_explanation: string;
-  examples: string[];
-  code_examples: Array<{ language: string; code: string }>;
-  highlights: string[];
-}> {
+async function augmentQuestionAnswer(question: QuestionWithAugmentation): Promise<AugmentedFields> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY environment variable is not set");
   }
@@ -79,7 +75,7 @@ Important:
   }
 
   try {
-    return JSON.parse(jsonStr);
+    return validateAugmentedFields(JSON.parse(jsonStr));
   } catch {
     console.error("Failed to parse Gemini response:", jsonStr);
     throw new Error("Failed to parse Gemini response as JSON");
