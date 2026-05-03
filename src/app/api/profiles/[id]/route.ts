@@ -9,7 +9,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data, error } = await supabase.from("interview_profiles").select("*").eq("id", id).single();
+  const { data, error } = await supabase.from("job_profiles").select("*").eq("id", id).single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(data);
@@ -41,7 +41,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (notes !== undefined) update.notes = notes || null;
   if (experience_range !== undefined) update.experience_range = experience_range || null;
 
-  const { data, error } = await supabase.from("interview_profiles").update(update).eq("id", id).select().single();
+  const { data, error } = await supabase.from("job_profiles").update(update).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
@@ -54,7 +54,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { error } = await supabase.from("interview_profiles").delete().eq("id", id);
+  const { error } = await supabase.from("job_profiles").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

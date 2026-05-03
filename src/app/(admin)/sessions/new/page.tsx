@@ -12,7 +12,7 @@ export default async function NewSessionPage({ searchParams }: Props) {
 
   if (profileId) {
     const supabase = await createClient();
-    const { data } = await supabase.from("interview_profiles").select("*").eq("id", profileId).single();
+    const { data } = await supabase.from("job_profiles").select("*").eq("id", profileId).single();
     profile = (data as InterviewProfile) ?? undefined;
   }
 

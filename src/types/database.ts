@@ -133,7 +133,8 @@ export interface Database {
       challenge_submissions: { Row: ChallengeSubmission };
       live_code_state: { Row: LiveCodeState };
       app_settings: { Row: AppSetting };
-      interview_profiles: { Row: import("./app").InterviewProfile };
+      job_profiles: { Row: import("./app").InterviewProfile };
+      candidate_job_profiles: { Row: CandidateJobProfile };
     };
   };
 }
@@ -183,4 +184,11 @@ export interface AppSetting {
   key: string;
   value: string;
   updated_at?: string | null;
+}
+
+export interface CandidateJobProfile {
+  id: string;
+  candidate_id: string;
+  job_profile_id: string;
+  created_at: string;
 }

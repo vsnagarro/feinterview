@@ -13,7 +13,7 @@ const difficultyVariant: Record<string, "default" | "success" | "warning" | "inf
 
 export default async function ProfilesPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from("interview_profiles").select("*").order("created_at", { ascending: false });
+  const { data } = await supabase.from("job_profiles").select("*").order("created_at", { ascending: false });
 
   const profiles = (data ?? []) as InterviewProfile[];
 
@@ -21,7 +21,7 @@ export default async function ProfilesPage() {
     <div className="p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Interview Profiles</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Job Profiles</h1>
           <p className="text-slate-500 text-sm mt-1">Reusable templates that pre-fill JD, level, and generation settings for new sessions</p>
         </div>
         <Link href="/profiles/new">

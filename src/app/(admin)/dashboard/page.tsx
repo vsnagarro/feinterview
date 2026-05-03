@@ -42,7 +42,7 @@ export default async function DashboardPage() {
       supabase.from("code_snippets").select("*", { count: "exact", head: true }),
       supabase.from("sessions").select("*", { count: "exact", head: true }),
       supabase.from("candidates").select("*", { count: "exact", head: true }),
-      supabase.from("interview_profiles").select("*", { count: "exact", head: true }),
+      supabase.from("job_profiles").select("*", { count: "exact", head: true }),
       supabase
         .from("sessions")
         .select(
@@ -53,7 +53,7 @@ export default async function DashboardPage() {
         )
         .order("created_at", { ascending: false })
         .limit(50),
-      supabase.from("interview_profiles").select("*").order("created_at", { ascending: false }).limit(5),
+      supabase.from("job_profiles").select("*").order("created_at", { ascending: false }).limit(5),
     ]);
 
     questionCount = qRes.count ?? 0;
@@ -90,9 +90,9 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-5 gap-4 mb-8">
         {[
-          { label: "Candidates", count: candidateCount, href: "/sessions" },
+          { label: "Candidates", count: candidateCount, href: "/candidates" },
           { label: "Sessions", count: sessionCount, href: "/sessions" },
-          { label: "Profiles", count: profileCount, href: "/profiles" },
+          { label: "Job Profiles", count: profileCount, href: "/profiles" },
           { label: "Questions", count: questionCount, href: "/library" },
           { label: "Code Snippets", count: snippetCount, href: "/library?tab=snippets" },
         ].map((stat) => (
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
       {recentProfiles.length > 0 && (
         <div className="card overflow-hidden mb-6">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Interview Profiles</h2>
+            <h2 className="font-semibold text-slate-900">Job Profiles</h2>
             <Link href="/profiles" className="text-sm text-sky-600 hover:underline">
               Manage →
             </Link>

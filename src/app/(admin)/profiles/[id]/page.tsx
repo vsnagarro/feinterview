@@ -30,7 +30,7 @@ export default async function ProfileDetailPage({ params, searchParams }: Props)
   const { edit } = await searchParams;
   const supabase = await createClient();
 
-  const { data } = await supabase.from("interview_profiles").select("*").eq("id", id).single();
+  const { data } = await supabase.from("job_profiles").select("*").eq("id", id).single();
   if (!data) notFound();
   const profile = data as InterviewProfile;
 
@@ -58,7 +58,7 @@ export default async function ProfileDetailPage({ params, searchParams }: Props)
       <div className="flex items-start justify-between gap-4">
         <div>
           <Link href="/profiles" className="text-sm text-slate-500 hover:text-sky-600">
-            ← Profiles
+            ← Job Profiles
           </Link>
           <div className="flex items-center gap-3 mt-2 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">{profile.title}</h1>
