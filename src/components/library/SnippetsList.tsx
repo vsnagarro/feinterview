@@ -307,13 +307,7 @@ export function SnippetsList({ initialSnippets }: SnippetsListProps) {
                   </div>
                 )}
                 <div className="px-4 pb-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={gistExporting === s.id}
-                    onClick={() => exportToGist(s)}
-                    title="Export this snippet to a new GitHub Gist"
-                  >
+                  <Button size="sm" variant="secondary" loading={gistExporting === s.id} onClick={() => exportToGist(s)} title="Export this snippet to a new GitHub Gist">
                     ↗ Export to Gist
                   </Button>
                 </div>

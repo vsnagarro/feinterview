@@ -17,17 +17,16 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   // Auth guard
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
-    return NextResponse.json(
-      { error: "GITHUB_TOKEN is not configured. Add it to .env.local to enable Gist export." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "GITHUB_TOKEN is not configured. Add it to .env.local to enable Gist export." }, { status: 503 });
   }
 
   let snippetId: string;
@@ -42,11 +41,7 @@ export async function POST(request: Request) {
   }
 
   const service = await createServiceClient();
-  const { data: snippet, error } = await service
-    .from("code_snippets")
-    .select("title, description, language, code, explanation, tags, difficulty")
-    .eq("id", snippetId)
-    .single();
+  const { data: snippet, error } = await service.from("code_snippets").select("title, description, language, code, explanation, tags, difficulty").eq("id", snippetId).single();
 
   if (error || !snippet) {
     return NextResponse.json({ error: "Snippet not found" }, { status: 404 });
@@ -54,21 +49,26 @@ export async function POST(request: Request) {
 
   // Build file extension from language
   const EXT: Record<string, string> = {
-    javascript:  "js",
-    typescript:  "ts",
-    python:      "py",
-    java:        "java",
-    cpp:         "cpp",
-    "c++":       "cpp",
-    c:           "c",
-    go:          "go",
-    rust:        "rs",
-    html:        "html",
-    css:         "css",
-    sql:         "sql",
+    javascript: "js",
+    typescript: "ts",
+    python: "py",
+    java: "java",
+    cpp: "cpp",
+    "c++": "cpp",
+    c: "c",
+    go: "go",
+    rust: "rs",
+    html: "html",
+    css: "css",
+    sql: "sql",
   };
   const ext = EXT[snippet.language?.toLowerCase() ?? ""] ?? "txt";
-  const filename = `${snippet.title.replace(/[^a-zA-Z0-9_\- ]/g, "").trim().replace(/ /g, "_") || "snippet"}.${ext}`;
+  const filename = `${
+    snippet.title
+      .replace(/[^a-zA-Z0-9_\- ]/g, "")
+      .trim()
+      .replace(/ /g, "_") || "snippet"
+  }.${ext}`;
 
   // Build description block at the top of the gist
   const descriptionLines: string[] = [];
@@ -78,9 +78,7 @@ export async function POST(request: Request) {
   descriptionLines.push(`Difficulty: ${snippet.difficulty ?? "mid"}`);
 
   const gistDescription = `${snippet.title}${snippet.description ? ` — ${snippet.description}` : ""}`;
-  const fileContent = descriptionLines.length
-    ? `${descriptionLines.map((l) => `// ${l.replace(/\n/g, "\n// ")}`).join("\n")}\n\n${snippet.code}`
-    : snippet.code;
+  const fileContent = descriptionLines.length ? `${descriptionLines.map((l) => `// ${l.replace(/\n/g, "\n// ")}`).join("\n")}\n\n${snippet.code}` : snippet.code;
 
   // Create the Gist via GitHub API
   const gistRes = await fetch("https://api.github.com/gists", {

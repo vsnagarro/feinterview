@@ -18,7 +18,9 @@ export function useCodeSync({ linkId, onConnected, onCodeUpdate }: UseCodeSyncOp
   useEffect(() => {
     if (!linkId) return;
 
-    const channel = supabase.channel(`challenge:${linkId}`);
+    const channel = supabase.channel(`challenge:${linkId}`, {
+      config: { broadcast: { self: false } },
+    });
     channelRef.current = channel;
 
     // Listen for incoming code updates (e.g., from admin or other users)

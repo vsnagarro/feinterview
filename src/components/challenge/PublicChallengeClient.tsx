@@ -113,23 +113,32 @@ export function PublicChallengeClient({ token }: { token: string }) {
     linkId: challenge?.linkId,
     onConnected: () => setConnected(true),
     onCodeUpdate: (code: string, language: string) => {
-      // Apply remote code update via executeEdits to preserve cursor position
-      const ed = editorRef.current;
-      if (ed) {
-        const model = ed.getModel();
-        if (model && model.getValue() !== code) {
-          const fullRange = model.getFullModelRange();
-          ed.executeEdits("remote-sync", [{ range: fullRange, text: code, forceMoveMarkers: false }]);
-        }
-      }
-      // Parse the serialized workspace and update
+      // Deserialize the incoming workspace snapshot
       try {
         const updatedWorkspace = deserializeWorkspace(code, workspace?.template || "vanilla", workspace?.files[0]?.code);
+        // Update the editor with the active file's code, NOT the raw JSON
+        const activeCode = updatedWorkspace.files.find((f) => f.path === updatedWorkspace.activePath)?.code ?? "";
+        const ed = editorRef.current;
+        if (ed) {
+          const model = ed.getModel();
+          if (model && model.getValue() !== activeCode) {
+            const fullRange = model.getFullModelRange();
+            ed.executeEdits("remote-sync", [{ range: fullRange, text: activeCode, forceMoveMarkers: false }]);
+          }
+        }
         setWorkspace(updatedWorkspace);
         setRuntimeLanguage(language);
       } catch {
-        // If deserialization fails, update just the active file
+        // If deserialization fails, treat as plain code for active file
         if (workspace && activeFile) {
+          const ed = editorRef.current;
+          if (ed) {
+            const model = ed.getModel();
+            if (model && model.getValue() !== code) {
+              const fullRange = model.getFullModelRange();
+              ed.executeEdits("remote-sync", [{ range: fullRange, text: code, forceMoveMarkers: false }]);
+            }
+          }
           setWorkspace(updateWorkspaceFile(workspace, activeFile.path, code));
         }
       }
